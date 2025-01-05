@@ -1,0 +1,33 @@
+left:
+  - - - key: KEY_Q
+      - key: KEY_W
+      - key: KEY_E
+      - key: KEY_R
+      - key: KEY_T
+    - - key: KEY_A
+      - key: KEY_S
+      - key: KEY_D
+      - key: KEY_F
+      - key: KEY_G
+    - - key: KEY_Z
+      - key: KEY_X
+      - key: KEY_C
+      - key: KEY_V
+      - key: KEY_B
+
+right:
+  - - - key: KEY_Y
+      - key: KEY_U
+      - key: KEY_I
+      - key: KEY_O
+      - key: KEY_P
+    - - key: KEY_H
+      - key: KEY_J
+      - key: KEY_K
+      - key: KEY_L
+      - key: KEY_SEMICOLON
+    - - key: KEY_N
+      - key: KEY_M
+      - key: KEY_COMMA
+      - key: KEY_DOT
+      - key: KEY_SLASH
