@@ -18,17 +18,6 @@ fn default_keymap() -> xkb::State {
     xkb::State::new(&keymap)
 }
 
-/// Get a default glyph/character for a key.
-pub fn default_glyph(key: &evdev::Key) -> String {
-    let keymap = default_keymap();
-
-    // Always an offset of 8;
-    // see <https://xkbcommon.org/doc/current/keymap-text-format-v1.html>
-    let scan_code = key.code() + 8;
-    let code = xkb::Keycode::from(scan_code);
-    keymap.key_get_utf8(code)
-}
-
 pub fn get_keymap_as_file() -> (File, u32) {
     let xkb_state = default_keymap();
     let keymap = xkb_state

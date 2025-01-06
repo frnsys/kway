@@ -1,13 +1,25 @@
+//! Defines a single key (button) in the UI
+//! and implements its interactions:
+//!
+//! - tap/click
+//! - hold (tap-hold)
+//! - swipe (single direction, swipe-and-release)
+//! - swipe-and-hold (single direction)
+//! - drag (potentially back-and-forth)
+
 use std::{
     sync::{Arc, OnceLock, RwLock},
     time::{Duration, Instant},
 };
 
 use arc_swap::ArcSwap;
-use gdk4::glib::{
-    Properties, Type, Value,
-    subclass::Signal,
-    value::{FromValue, GenericValueTypeChecker},
+use gdk4::{
+    glib::{
+        Properties, Type, Value,
+        subclass::Signal,
+        value::{FromValue, GenericValueTypeChecker},
+    },
+    pango::EllipsizeMode,
 };
 use gtk::{glib, prelude::*, subclass::prelude::*};
 use relm4::gtk;
@@ -18,8 +30,6 @@ use tracing::debug;
 pub struct ButtonInner {
     #[property(get, set)]
     primary_content: Arc<RwLock<Option<String>>>,
-    #[property(get, set)]
-    secondary_content: Arc<RwLock<Option<String>>>,
 }
 
 /// Minimum distance to trigger a swipe.
@@ -28,6 +38,8 @@ const SWIPE_MIN_DISTANCE: f64 = 5.;
 /// Swipe angle must be w/in this number of degrees
 /// to trigger a directional swipe.
 const SWIPE_ANGLE_TOLERANCE: f64 = 15.;
+
+const HOLD_TERM: u64 = 500;
 
 #[glib::object_subclass]
 impl ObjectSubclass for ButtonInner {
@@ -67,9 +79,6 @@ impl ObjectImpl for ButtonInner {
         obj.connect_primary_content_notify(|obj| {
             obj.update_view();
         });
-        obj.connect_secondary_content_notify(|obj| {
-            obj.update_view();
-        });
 
         let state = Arc::new(ArcSwap::from_pointee(KeyState::Idle));
 
@@ -86,12 +95,12 @@ impl ObjectImpl for ButtonInner {
             let weak_ref = weak_ref.clone();
             let state_cb = state_cb.clone();
             timer_cb.store(Arc::new(Instant::now()));
-            glib::timeout_add_once(Duration::from_millis(250), move || {
+            glib::timeout_add_once(Duration::from_millis(HOLD_TERM), move || {
                 if state_cb.load().can_press() {
                     // TODO also check that key is still pressed down/not already released
-                    debug!("[Hold]");
-                    let obj = weak_ref.upgrade().unwrap();
-                    state_cb.store(Arc::new(KeyState::Pressed));
+                    // debug!("[Hold]");
+                    // let obj = weak_ref.upgrade().unwrap();
+                    // state_cb.store(Arc::new(KeyState::Pressed));
                     // gesture.set_state(gtk::EventSequenceState::Claimed);
                     // obj.obj().emit_by_name::<()>("tap-pressed", &[]);
                 }
@@ -166,7 +175,6 @@ glib::wrapper! {
 impl KeyButton {
     pub fn update_view(&self) {
         let primary_content = self.primary_content();
-        let secondary_content = self.secondary_content();
 
         let layout = gtk::Box::builder()
             .orientation(gtk::Orientation::Vertical)
@@ -177,13 +185,6 @@ impl KeyButton {
             if primary_content.len() > 0 {
                 let primary_content = gtk::Label::new(Some(primary_content.as_str()));
                 layout.append(&primary_content);
-            }
-        }
-
-        if let Some(secondary_content) = secondary_content {
-            if secondary_content.len() > 0 {
-                let secondary_content = gtk::Label::new(Some(secondary_content.as_str()));
-                layout.append(&secondary_content);
             }
         }
 

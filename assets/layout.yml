@@ -14,37 +14,46 @@ left:
       - key: KEY_C
       - key: KEY_V
       - key: KEY_B
-  - - - key: KEY_X
-      - key: KEY_X
-      - key: KEY_X
-      - key: KEY_X
-      - key: KEY_X
-    - - key: KEY_X
-      - key: KEY_X
-      - key: KEY_X
-      - key: KEY_X
-      - key: KEY_X
-    - - key: KEY_X
-      - key: KEY_X
-      - key: KEY_X
-      - key: KEY_X
-      - key: KEY_X
+    - - key: KEY_ENTER
+      - key: KEY_SPACE
+        n: !Layer [Right, 1]
+        width: 3
+      - key: KEY_BACKSPACE
 right:
   - - - key: KEY_Y
-        n: Shift
+        n: !Shift
       - key: KEY_U
       - key: KEY_I
       - key: KEY_O
       - key: KEY_P
     - - key: KEY_H
+        w: !Key KEY_SPACE
       - key: KEY_J
       - key: KEY_K
-        n: !Layer [Left, 1]
       - key: KEY_L
-        n: Shift
+        n: !Shift
       - key: KEY_SEMICOLON
     - - key: KEY_N
       - key: KEY_M
       - key: KEY_COMMA
       - key: KEY_DOT
       - key: KEY_SLASH
+    - - key: KEY_BACKSPACE
+      - key: KEY_SPACE
+        width: 3
+      - key: KEY_ENTER
+  - - - key: KEY_1
+      - key: KEY_2
+      - key: KEY_3
+      - key: KEY_4
+      - key: KEY_5
+    - - key: KEY_6
+      - key: KEY_7
+      - key: KEY_8
+      - key: KEY_9
+      - key: KEY_0
+    - - key: KEY_X
+      - key: KEY_X
+      - key: KEY_X
+      - key: KEY_X
+      - key: KEY_X

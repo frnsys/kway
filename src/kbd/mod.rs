@@ -1,3 +1,4 @@
+mod glyphs;
 mod keymap;
 mod layout;
 mod session;
@@ -43,15 +44,11 @@ impl Keyboard {
 
         let _registry = display.get_registry(&qh, ());
 
-        let mut state = SessionState {
-            keyboard_manager: None,
-            keyboard: None,
-            seat: None,
-        };
+        let mut state = SessionState::default();
 
-        //bind seat and virtual keyboard manager
+        // 1. Bind seat and virtual keyboard/input method manager
+        // 2. Create virtual keyboard/input method by seat and manager
         event_queue.roundtrip(&mut state).unwrap();
-        //create virtual keyboard by seat and manager
         event_queue.roundtrip(&mut state).unwrap();
 
         Self {
@@ -90,6 +87,14 @@ impl Keyboard {
                 match side {
                     Side::Left => self.layer.0 = idx,
                     Side::Right => self.layer.1 = idx,
+                }
+
+                if let Some(input) = &self.session_state.input {
+                    println!("INPUT HANDLING");
+                    println!("  Serial: {:?}", self.session_state.input_serial);
+                    input.commit_string("testing".into());
+                    input.commit(self.session_state.input_serial);
+                    self.event_queue.roundtrip(&mut self.session_state).unwrap();
                 }
             }
         }
@@ -175,13 +180,6 @@ impl Keyboard {
             evdev::Key::KEY_SCROLLLOCK => 32768,
             _ => 0,
         }
-    }
-
-    pub fn active_layers(&self) -> (&Layer, &Layer) {
-        (
-            &self.layout.left[self.layer.0],
-            &self.layout.right[self.layer.1],
-        )
     }
 
     pub fn left_layers(&self) -> impl Iterator<Item = &Layer> {

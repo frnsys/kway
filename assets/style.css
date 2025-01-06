@@ -1,29 +1,29 @@
 window {
-    background-color: rgba(0, 0, 0, 0);
-    background-color: rgba(0, 0, 0, 0.5);
+  background-color: rgba(0, 0, 0, 0);
+  /* background-color: rgba(0, 0, 0, 0.5); */
 }
 
 button {
-    background-color: rgb(220, 220, 220);
-    background-image: none;
-    border-radius: 0;
-    margin: 1px;
-    padding: 12px;
-
+  background-color: rgb(16, 16, 16);
+  background-image: none;
+  border-radius: 0;
+  border: 1px solid rgb(32, 32, 32);
+  margin: 1px;
+  opacity: 0.85;
 }
 
 button label {
-    color: black;
-}
-
-button:hover {
-    background-color: rgb(255, 255, 255);
+  color: #fff;
+  /* font-weight: bold; */
+  font-size: 24px;
+  font-family: "Fira Code", monospace;
 }
 
 button:active {
-    background-color: rgb(255, 255, 255);
+  opacity: 1.0;
+  background-color: #2CAB63;
 }
 
 button:checked {
-    background-color: rgb(255, 255, 255);
+  background-color: rgb(255, 255, 255);
 }

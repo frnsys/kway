@@ -15,7 +15,7 @@ impl App {
     pub fn new() -> Self {
         let ui = RelmApp::<UIMessage>::new("vkbd");
         let styles = include_str!("../assets/style.css");
-        relm4::set_global_css(styles);
+        relm4::set_global_css_with_priority(styles, relm4::gtk::STYLE_PROVIDER_PRIORITY_USER);
 
         App {
             ui,

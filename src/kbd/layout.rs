@@ -2,7 +2,7 @@ use serde::Deserialize;
 
 use crate::kbd::KeyType;
 
-use super::keymap::default_glyph;
+use super::glyphs::default_glyph;
 
 /// A `Layout` has two [`Side`]s,
 /// each of which consists of one or more [`Layer`]s.
@@ -85,7 +85,7 @@ impl KeyDef {
     pub fn glyph(&self) -> String {
         self.label
             .clone()
-            .unwrap_or_else(|| default_glyph(&self.key))
+            .unwrap_or_else(|| default_glyph(&self.key).to_string())
     }
 
     pub fn width(&self) -> f32 {

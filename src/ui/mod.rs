@@ -83,15 +83,13 @@ impl SimpleComponent for UIModel {
 
         let (keyboard, pointer) = handle;
 
-        // TODO make this the configurable key height
-        let geometry_unit = 160 / 100;
         let left_halves: Vec<_> = keyboard
             .left_layers()
-            .map(|layer| layer.render(geometry_unit, sender.clone()))
+            .map(|layer| layer.render(sender.clone()))
             .collect();
         let right_halves: Vec<_> = keyboard
             .right_layers()
-            .map(|layer| layer.render(geometry_unit, sender.clone()))
+            .map(|layer| layer.render(sender.clone()))
             .collect();
 
         let model = UIModel {
@@ -160,7 +158,9 @@ impl UIModel {
 }
 
 impl kbd::Layer {
-    fn render(&self, geometry_unit: i32, sender: ComponentSender<UIModel>) -> gtk::Box {
+    fn render(&self, sender: ComponentSender<UIModel>) -> gtk::Box {
+        let geometry_unit = 48;
+
         let container = gtk::Box::builder()
             .orientation(gtk::Orientation::Vertical)
             .build();
@@ -215,7 +215,6 @@ impl kbd::Layer {
                     KeyType::Normal => {
                         let button = KeyButton::default();
                         button.set_primary_content(key.glyph());
-                        button.set_secondary_content(key.glyph());
 
                         button.set_width_request(width);
                         button.set_height_request(geometry_unit);
@@ -347,7 +346,7 @@ impl kbd::Layer {
             container.append(&row_container);
         }
 
-        container.set_margin_all(15);
+        container.set_margin_all(32);
         container.set_align(gtk::Align::Center);
         container.set_expand(true);
         container
