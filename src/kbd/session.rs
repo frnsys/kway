@@ -114,6 +114,8 @@ impl Dispatch<WlSeat, ()> for SessionState {
     }
 }
 
+// TODO: Seems to be inconsistent; browsers I tried
+// only sometimes send the activate event.
 impl Dispatch<ZwpInputMethodV2, ()> for SessionState {
     fn event(
         state: &mut Self,

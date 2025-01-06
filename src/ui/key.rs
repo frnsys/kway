@@ -13,13 +13,10 @@ use std::{
 };
 
 use arc_swap::ArcSwap;
-use gdk4::{
-    glib::{
-        Properties, Type, Value,
-        subclass::Signal,
-        value::{FromValue, GenericValueTypeChecker},
-    },
-    pango::EllipsizeMode,
+use gdk4::glib::{
+    Properties, Type, Value,
+    subclass::Signal,
+    value::{FromValue, GenericValueTypeChecker},
 };
 use gtk::{glib, prelude::*, subclass::prelude::*};
 use relm4::gtk;
@@ -82,16 +79,13 @@ impl ObjectImpl for ButtonInner {
 
         let state = Arc::new(ArcSwap::from_pointee(KeyState::Idle));
 
-        let gesture = gtk::GestureDrag::new();
-        let state_cb = Arc::clone(&state);
-
         let timer = Arc::new(ArcSwap::from_pointee(Instant::now()));
         let timer_cb = Arc::clone(&timer);
 
         let gesture = gtk::GestureDrag::new();
         let weak_ref = self.downgrade();
         let state_cb = Arc::clone(&state);
-        gesture.connect_drag_begin(move |gesture, _x, _y| {
+        gesture.connect_drag_begin(move |_gesture, _x, _y| {
             let weak_ref = weak_ref.clone();
             let state_cb = state_cb.clone();
             timer_cb.store(Arc::new(Instant::now()));
@@ -128,7 +122,7 @@ impl ObjectImpl for ButtonInner {
 
         let obj_cb = obj.clone();
         let state_cb = Arc::clone(&state);
-        gesture.connect_drag_end(move |gesture, _x, _y| {
+        gesture.connect_drag_end(move |_gesture, _x, _y| {
             // If this hasn't yet been claimed as a swipe or a hold
             // then treat it as a tap.
             if state_cb.load().can_press() {

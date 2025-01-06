@@ -155,7 +155,6 @@ pub fn default_glyph(key: &Key) -> &'static str {
         Key::KEY_MSDOS => "?",
         Key::KEY_COFFEE => "?", /* AL Terminal Lock/Screensaver */
         Key::KEY_DIRECTION => "?",
-        Key::KEY_ROTATE_DISPLAY => "?",
         Key::KEY_CYCLEWINDOWS => "?",
         Key::KEY_MAIL => "?",
         Key::KEY_BOOKMARKS => "?", /* AC Bookmarks */
@@ -330,7 +329,6 @@ pub fn default_glyph(key: &Key) -> &'static str {
         Key::KEY_SUBTITLE => "?",
         Key::KEY_ANGLE => "?",
         Key::KEY_ZOOM => "?",
-        Key::KEY_FULL_SCREEN => "?",
         Key::KEY_MODE => "?",
         Key::KEY_KEYBOARD => "?",
         Key::KEY_SCREEN => "?",

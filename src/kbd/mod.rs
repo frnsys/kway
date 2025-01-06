@@ -4,7 +4,7 @@ mod layout;
 mod session;
 
 use layout::Side;
-pub use layout::{Layer, Layout, SwipeAction};
+pub use layout::{KeyDef, Layer, Layout, SwipeAction};
 use session::SessionState;
 use tracing::debug;
 use wayland_client::{Connection, EventQueue, protocol::wl_keyboard::KeyState};
@@ -89,13 +89,15 @@ impl Keyboard {
                     Side::Right => self.layer.1 = idx,
                 }
 
-                if let Some(input) = &self.session_state.input {
-                    println!("INPUT HANDLING");
-                    println!("  Serial: {:?}", self.session_state.input_serial);
-                    input.commit_string("testing".into());
-                    input.commit(self.session_state.input_serial);
-                    self.event_queue.roundtrip(&mut self.session_state).unwrap();
-                }
+                // TODO testing
+                // if let Some(input) = &self.session_state.input {
+                //     // TODO
+                //     println!("INPUT HANDLING");
+                //     println!("  Serial: {:?}", self.session_state.input_serial);
+                //     input.commit_string("testing".into());
+                //     input.commit(self.session_state.input_serial);
+                //     self.event_queue.roundtrip(&mut self.session_state).unwrap();
+                // }
             }
         }
     }
