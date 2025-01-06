@@ -1,6 +1,6 @@
-use serde::Deserialize;
+use serde::{Deserialize, Deserializer};
 
-use crate::kbd::KeyType;
+use crate::ptr::PointerButton;
 
 use super::glyphs::default_glyph;
 
@@ -21,7 +21,13 @@ pub enum Side {
 impl Default for Layout {
     fn default() -> Self {
         let default = include_str!("../../assets/layout.yml");
-        serde_yaml::from_str(default).expect("Default layout is valid")
+        let mut layout: Layout = serde_yaml::from_str(default).expect("Default layout is valid");
+
+        let mouse_layer = include_str!("../../assets/mouse-layer.yml");
+        let mouse_layer: Layer = serde_yaml::from_str(mouse_layer).expect("Mouse layer is valid");
+        layout.left.push(mouse_layer);
+
+        layout
     }
 }
 
@@ -37,8 +43,65 @@ impl Layer {
 }
 
 #[derive(Debug, Clone, Deserialize)]
-pub struct KeyDef {
+pub enum Modifier {
+    Alt,
+    Ctrl,
+    Shift,
+    Meta,
+}
+impl Modifier {
+    pub fn code(&self) -> u16 {
+        match self {
+            Self::Alt => 56,
+            Self::Ctrl => 29,
+            Self::Shift => 42,
+            Self::Meta => 125,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(untagged)]
+pub enum KeyDef {
+    Basic(BasicKey),
+
+    PointerButton(PointerButton),
+
+    #[serde(deserialize_with = "pointer")]
+    Pointer,
+}
+
+impl PointerButton {
+    pub fn glyph(&self) -> &'static str {
+        match self {
+            Self::Left => "′",
+            Self::Middle => "″",
+            Self::Right => "‴",
+        }
+    }
+}
+
+// Hack to deserialize an untagged unit variant by name.
+// <https://github.com/serde-rs/serde/issues/1158#issuecomment-365362959>
+fn pointer<'de, D>(deserializer: D) -> Result<(), D::Error>
+where
+    D: Deserializer<'de>,
+{
+    #[derive(Deserialize)]
+    enum Helper {
+        #[serde(rename = "Pointer")]
+        Pointer,
+    }
+    Helper::deserialize(deserializer)?;
+    Ok(())
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct BasicKey {
     pub key: evdev::Key,
+
+    #[serde(default, rename = "mods")]
+    pub modifiers: Vec<Modifier>,
 
     #[serde(default, rename = "n")]
     pub up: Option<SwipeAction>,
@@ -58,10 +121,11 @@ pub struct KeyDef {
     #[serde(default)]
     label: Option<String>,
 }
-impl Default for KeyDef {
+impl Default for BasicKey {
     fn default() -> Self {
         Self {
             key: evdev::Key::KEY_A,
+            modifiers: Vec::default(),
             up: None,
             right: None,
             left: None,
@@ -71,17 +135,7 @@ impl Default for KeyDef {
         }
     }
 }
-
-impl From<evdev::Key> for KeyDef {
-    fn from(value: evdev::Key) -> Self {
-        KeyDef {
-            key: value,
-            ..Default::default()
-        }
-    }
-}
-impl KeyDef {
-    /// A string representing this key.
+impl BasicKey {
     pub fn glyph(&self) -> String {
         self.label
             .clone()
@@ -91,36 +145,14 @@ impl KeyDef {
     pub fn width(&self) -> f32 {
         self.width.unwrap_or(1) as f32
     }
+}
 
-    pub fn key_type(&self) -> KeyType {
-        if self.is_mod_key() {
-            KeyType::Mod
-        } else if self.is_lock_key() {
-            KeyType::Lock
-        } else {
-            KeyType::Normal
-        }
-    }
-
-    fn is_mod_key(&self) -> bool {
-        matches!(
-            self.key,
-            evdev::Key::KEY_LEFTCTRL
-                | evdev::Key::KEY_RIGHTCTRL
-                | evdev::Key::KEY_LEFTMETA
-                | evdev::Key::KEY_RIGHTMETA
-                | evdev::Key::KEY_LEFTSHIFT
-                | evdev::Key::KEY_RIGHTSHIFT
-                | evdev::Key::KEY_LEFTALT
-                | evdev::Key::KEY_RIGHTALT
-        )
-    }
-
-    fn is_lock_key(&self) -> bool {
-        matches!(
-            self.key,
-            evdev::Key::KEY_CAPSLOCK | evdev::Key::KEY_NUMLOCK | evdev::Key::KEY_SCROLLLOCK
-        )
+impl From<evdev::Key> for KeyDef {
+    fn from(value: evdev::Key) -> Self {
+        KeyDef::Basic(BasicKey {
+            key: value,
+            ..Default::default()
+        })
     }
 }
 
@@ -144,24 +176,13 @@ pub enum SwipeAction {
     /// Switch layer
     Layer(Side, usize),
 
-    /// Fire the pressed key with Alt.
-    Alt,
-
-    /// Fire the pressed key with Ctrl.
-    Ctrl,
-
-    /// Fire the pressed key with Shift.
-    Shift,
-
-    /// Fire the pressed key with Meta/Super.
-    Meta,
+    /// Fire the pressed key with a modifier.
+    Modified(Modifier),
 
     /// Drag cursor in the swipe direction.
     Arrow,
 
     /// Mouse scroll in the swipe direction.
-    /// This is only meaningful for up/down swipes.
-    /// Left/right swipes will instead send left/right arrows.
     Scroll,
 
     /// Select text in the swipe direction.

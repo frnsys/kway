@@ -19,7 +19,7 @@ impl App {
 
         App {
             ui,
-            pointer: Pointer {},
+            pointer: Pointer::new(),
             keyboard: Keyboard::new(),
         }
     }

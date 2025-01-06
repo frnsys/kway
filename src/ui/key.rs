@@ -9,7 +9,7 @@
 
 use std::{
     sync::{Arc, OnceLock, RwLock},
-    time::{Duration, Instant},
+    time::Duration,
 };
 
 use arc_swap::ArcSwap;
@@ -91,9 +91,7 @@ impl ObjectImpl for ButtonInner {
         });
 
         let state = Arc::new(ArcSwap::from_pointee(KeyState::Idle));
-
-        let timer = Arc::new(ArcSwap::from_pointee(Instant::now()));
-        let timer_cb = Arc::clone(&timer);
+        let last_position = Arc::new(ArcSwap::from_pointee((0f64, 0f64)));
 
         let gesture = gtk::GestureDrag::new();
         let weak_ref = self.downgrade();
@@ -103,7 +101,6 @@ impl ObjectImpl for ButtonInner {
 
             let weak_ref = weak_ref.clone();
             let state_cb = state_cb.clone();
-            timer_cb.store(Arc::new(Instant::now()));
             glib::timeout_add_once(Duration::from_millis(HOLD_TERM), move || {
                 if state_cb.load().can_press() {
                     debug!("[Hold]");
@@ -116,8 +113,15 @@ impl ObjectImpl for ButtonInner {
 
         let obj_cb = obj.clone();
         let state_cb = Arc::clone(&state);
+        let last_pos_cb = last_position.clone();
         gesture.connect_drag_update(move |gesture, _x, _y| {
             if let Some((x, y)) = gesture.offset() {
+                let (last_x, last_y) = **last_pos_cb.load();
+                let delta_x = x - last_x;
+                let delta_y = last_y - y;
+                obj_cb.emit_by_name::<()>("freemove", &[&delta_x, &delta_y]);
+                last_pos_cb.store(Arc::new((x, y)));
+
                 if (x.abs() >= SWIPE_MIN_DISTANCE || y.abs() >= SWIPE_MIN_DISTANCE)
                     && state_cb.load().can_swipe()
                 {
@@ -149,6 +153,7 @@ impl ObjectImpl for ButtonInner {
 
         let obj_cb = obj.clone();
         let state_cb = Arc::clone(&state);
+        let last_pos_cb = last_position.clone();
         gesture.connect_drag_end(move |_gesture, _x, _y| {
             // If this hasn't yet been claimed as a swipe or a hold
             // then treat it as a tap.
@@ -160,6 +165,7 @@ impl ObjectImpl for ButtonInner {
 
             debug!("[Release]");
             state_cb.store(Arc::new(KeyState::Idle));
+            last_pos_cb.store(Arc::new((0., 0.)));
             obj_cb.emit_by_name::<()>("released", &[]);
         });
         obj.add_controller(gesture);
@@ -174,6 +180,9 @@ impl ObjectImpl for ButtonInner {
                     .build(),
                 Signal::builder("tap-pressed").build(),
                 Signal::builder("released").build(),
+                Signal::builder("freemove")
+                    .param_types([Type::F64, Type::F64])
+                    .build(),
             ]
         })
     }

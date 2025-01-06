@@ -5,7 +5,18 @@ This is a heavily modified version of [ptazithos/wkeys](https://github.com/ptazi
 ## Dependencies
 
 ```bash
-zypper in enchant-devel
+sudo zypper in enchant-devel
+
+sudo usermod -a -G input $USER
+
+# Add to `/etc/udev/rules.d/99-input.rules`
+KERNEL=="event*", SUBSYSTEM=="input", GROUP="input", MODE="0660"
+KERNEL=="uinput", GROUP="input", MODE="0660"
+
+sudo udevadm control --reload-rules
+sudo udevadm trigger
+
+sudo reboot
 ```
 
 ## Features

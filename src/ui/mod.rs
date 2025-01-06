@@ -19,8 +19,8 @@ use relm4::{
 use tracing::debug;
 
 use crate::{
-    kbd::{self, KeyDef, KeyMessage, KeyType, Keyboard, SwipeAction},
-    ptr::Pointer,
+    kbd::{self, BasicKey, KeyDef, KeyMessage, KeyType, Keyboard, Modifier, SwipeAction},
+    ptr::{Pointer, PointerMessage},
 };
 
 use key::{Direction, KeyButton};
@@ -32,6 +32,7 @@ pub struct UIModel {
 
     trigger: gtk::Window,
     keyboard: Keyboard,
+    pointer: Pointer,
     left: Vec<gtk::Box>,
     right: Vec<gtk::Box>,
 }
@@ -40,6 +41,9 @@ pub struct UIModel {
 pub enum UIMessage {
     /// Pass message to the keyboard.
     Keyboard(KeyMessage),
+
+    /// Pass message to the pointer.
+    Pointer(PointerMessage),
 
     /// Update displayed layouts.
     UpdateLayout,
@@ -56,6 +60,21 @@ pub enum UIMessage {
 impl From<KeyMessage> for UIMessage {
     fn from(value: KeyMessage) -> Self {
         Self::Keyboard(value)
+    }
+}
+impl From<PointerMessage> for UIMessage {
+    fn from(value: PointerMessage) -> Self {
+        Self::Pointer(value)
+    }
+}
+impl From<Direction> for evdev::Key {
+    fn from(dir: Direction) -> Self {
+        match dir {
+            Direction::Up => evdev::Key::KEY_UP,
+            Direction::Right => evdev::Key::KEY_RIGHT,
+            Direction::Left => evdev::Key::KEY_LEFT,
+            Direction::Down => evdev::Key::KEY_DOWN,
+        }
     }
 }
 
@@ -121,6 +140,7 @@ impl SimpleComponent for UIModel {
             .collect();
 
         let model = UIModel {
+            pointer,
             keyboard,
             trigger: window,
             window: (left, right),
@@ -146,6 +166,9 @@ impl SimpleComponent for UIModel {
         match msg {
             UIMessage::Keyboard(msg) => {
                 self.keyboard.handle(msg);
+            }
+            UIMessage::Pointer(msg) => {
+                self.pointer.handle(msg).unwrap();
             }
             UIMessage::UpdateLayout => {
                 self.render_keyboard();
@@ -204,14 +227,72 @@ impl UIModel {
 
 impl kbd::KeyDef {
     fn render(&self, size: i32, sender: &ComponentSender<UIModel>) -> gtk::Widget {
+        match self {
+            KeyDef::Basic(key) => key.render(size, sender),
+            KeyDef::PointerButton(key) => {
+                let button = KeyButton::default();
+                button.set_primary_content(key.glyph());
+                button.set_width_request(size);
+                button.set_height_request(size);
+
+                let key = key.clone();
+                let sender_cb = sender.clone();
+                button.connect("tap-pressed", true, move |_| {
+                    sender_cb.input(PointerMessage::Press(key).into());
+                    None
+                });
+
+                let key = key.clone();
+                let sender_cb = sender.clone();
+                button.connect("released", true, move |_| {
+                    sender_cb.input(PointerMessage::Release(key).into());
+                    None
+                });
+
+                button.upcast()
+            }
+            KeyDef::Pointer => {
+                let glyph = "⁜";
+                let button = KeyButton::default();
+                button.set_primary_content(glyph);
+                button.set_width_request(size);
+                button.set_height_request(size);
+
+                let sender_cb = sender.clone();
+                button.connect("freemove", true, move |args| {
+                    let dx = args[1].get::<f64>().unwrap().round() as i32;
+                    let dy = args[2].get::<f64>().unwrap().round() as i32;
+                    sender_cb.input(PointerMessage::Move(dx, dy).into());
+
+                    sender_cb.input(KeyMessage::MouseLayer(true).into());
+                    sender_cb.input(UIMessage::UpdateLayout);
+                    None
+                });
+
+                let sender_cb = sender.clone();
+                button.connect("released", true, move |_| {
+                    sender_cb.input(KeyMessage::MouseLayer(false).into());
+                    sender_cb.input(UIMessage::UpdateLayout);
+                    None
+                });
+
+                button.upcast()
+            }
+        }
+    }
+}
+
+impl kbd::BasicKey {
+    fn render(&self, size: i32, sender: &ComponentSender<UIModel>) -> gtk::Widget {
         let key = self.clone();
+        let glyph = key.glyph();
         let scan_code = key.key.code();
         let width = (key.width() * f32::from(size as u16)).round() as i32;
 
-        match key.key_type() {
+        match KeyType::from(key.key) {
             KeyType::Mod => {
                 let toggle = gtk::ToggleButton::builder()
-                    .label(key.glyph())
+                    .label(glyph)
                     .width_request(width)
                     .height_request(size)
                     .build();
@@ -229,7 +310,7 @@ impl kbd::KeyDef {
             }
             KeyType::Lock => {
                 let toggle = gtk::ToggleButton::builder()
-                    .label("TODO")
+                    .label(glyph)
                     .width_request(width)
                     .height_request(size)
                     .build();
@@ -247,13 +328,16 @@ impl kbd::KeyDef {
             }
             KeyType::Normal => {
                 let button = KeyButton::default();
-                button.set_primary_content(key.glyph());
-
+                button.set_primary_content(glyph);
                 button.set_width_request(width);
                 button.set_height_request(size);
 
                 let sender_cb = sender.clone();
+                let modifiers = key.modifiers.clone();
                 button.connect("tap-pressed", true, move |_| {
+                    for modifier in &modifiers {
+                        sender_cb.input(KeyMessage::ModPress(modifier.code()).into());
+                    }
                     sender_cb.input(KeyMessage::ButtonPress(scan_code).into());
                     None
                 });
@@ -282,6 +366,7 @@ impl kbd::KeyDef {
                 let key_cb = key.clone();
                 let sender_cb = sender.clone();
                 let state_cb = state.clone();
+                let modifiers = key.modifiers.clone();
                 button.connect("released", true, move |_| {
                     if let Some(dir) = state_cb.swap(None).take() {
                         let action = match *dir {
@@ -296,6 +381,9 @@ impl kbd::KeyDef {
                         }
                     } else {
                         sender_cb.input(KeyMessage::ButtonRelease(scan_code).into());
+                        for modifier in &modifiers {
+                            sender_cb.input(KeyMessage::ModRelease(modifier.code()).into());
+                        }
                     }
                     None
                 });
@@ -337,11 +425,6 @@ impl kbd::Layer {
     }
 }
 
-const ALT: u16 = 56;
-const CTRL: u16 = 29;
-const SHIFT: u16 = 42;
-const META: u16 = 125;
-
 fn send_key(key: u16, sender: &ComponentSender<UIModel>) {
     sender.input(KeyMessage::ButtonPress(key).into());
     sender.input(KeyMessage::ButtonRelease(key).into());
@@ -355,7 +438,7 @@ fn send_mod_key(modifier: u16, key: u16, sender: &ComponentSender<UIModel>) {
 }
 
 fn handle_swipe_action_press(
-    key_def: &KeyDef,
+    key_def: &BasicKey,
     action: &SwipeAction,
     dir: Direction,
     sender: &ComponentSender<UIModel>,
@@ -366,57 +449,33 @@ fn handle_swipe_action_press(
         SwipeAction::Key(key) => {
             send_key(key.code(), sender);
         }
-        SwipeAction::Shift => {
-            send_mod_key(SHIFT, scan_code, sender);
-        }
-        SwipeAction::Ctrl => {
-            send_mod_key(CTRL, scan_code, sender);
-        }
-        SwipeAction::Alt => {
-            send_mod_key(ALT, scan_code, sender);
-        }
-        SwipeAction::Meta => {
-            send_mod_key(META, scan_code, sender);
+        SwipeAction::Modified(modifier) => {
+            send_mod_key(modifier.code(), scan_code, sender);
         }
         SwipeAction::Layer(side, idx) => {
             sender.input(KeyMessage::Layer(*side, *idx).into());
             sender.input(UIMessage::UpdateLayout);
         }
         SwipeAction::Arrow => {
-            let key = match dir {
-                Direction::Up => evdev::Key::KEY_UP,
-                Direction::Right => evdev::Key::KEY_RIGHT,
-                Direction::Left => evdev::Key::KEY_LEFT,
-                Direction::Down => evdev::Key::KEY_DOWN,
-            };
+            let key: evdev::Key = dir.into();
             send_key(key.code(), sender);
         }
         SwipeAction::Select => {
-            let key = match dir {
-                Direction::Up => evdev::Key::KEY_UP,
-                Direction::Right => evdev::Key::KEY_RIGHT,
-                Direction::Left => evdev::Key::KEY_LEFT,
-                Direction::Down => evdev::Key::KEY_DOWN,
-            };
-            send_mod_key(SHIFT, key.code(), sender);
+            let key: evdev::Key = dir.into();
+            send_mod_key(Modifier::Shift.code(), key.code(), sender);
         }
         SwipeAction::Delete => {
-            let key = match dir {
-                Direction::Up => evdev::Key::KEY_UP,
-                Direction::Right => evdev::Key::KEY_RIGHT,
-                Direction::Left => evdev::Key::KEY_LEFT,
-                Direction::Down => evdev::Key::KEY_DOWN,
-            };
-            send_mod_key(SHIFT, key.code(), sender);
+            let key: evdev::Key = dir.into();
+            send_mod_key(Modifier::Shift.code(), key.code(), sender);
         }
         SwipeAction::Scroll => {
-            let key = match dir {
-                Direction::Up => evdev::Key::KEY_SCROLLUP,
-                Direction::Right => evdev::Key::KEY_RIGHT,
-                Direction::Left => evdev::Key::KEY_LEFT,
-                Direction::Down => evdev::Key::KEY_SCROLLDOWN,
+            let msg = match dir {
+                Direction::Up => PointerMessage::ScrollUp,
+                Direction::Right => PointerMessage::ScrollRight,
+                Direction::Left => PointerMessage::ScrollLeft,
+                Direction::Down => PointerMessage::ScrollDown,
             };
-            send_key(key.code(), sender);
+            sender.input(msg.into());
         }
         SwipeAction::HideKeyboard => {
             sender.input(UIMessage::HideKeyboard);
@@ -425,7 +484,7 @@ fn handle_swipe_action_press(
 }
 
 fn handle_swipe_action_release(
-    _key_def: &KeyDef,
+    _key_def: &BasicKey,
     action: &SwipeAction,
     _dir: Direction,
     sender: &ComponentSender<UIModel>,

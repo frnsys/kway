@@ -9,6 +9,7 @@ arc-swap = "1.7.1"
 evdev = { version = "0.12.2", features = ["serde"] }
 gdk4 = "0.9.5"
 gtk4-layer-shell = "0.4.0"
+mouse-keyboard-input = "0.9.1"
 relm4 = "0.9.1"
 serde = { version = "1.0.217", features = ["derive"] }
 serde_yaml = "0.9.34"

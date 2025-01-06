@@ -4,7 +4,7 @@ mod layout;
 mod session;
 
 use layout::Side;
-pub use layout::{KeyDef, Layer, Layout, SwipeAction};
+pub use layout::{BasicKey, KeyDef, Layer, Layout, Modifier, SwipeAction};
 use session::SessionState;
 use tracing::debug;
 use wayland_client::{Connection, EventQueue, protocol::wl_keyboard::KeyState};
@@ -13,6 +13,24 @@ pub enum KeyType {
     Mod,
     Lock,
     Normal,
+}
+impl From<evdev::Key> for KeyType {
+    fn from(value: evdev::Key) -> Self {
+        match value {
+            evdev::Key::KEY_LEFTCTRL
+            | evdev::Key::KEY_RIGHTCTRL
+            | evdev::Key::KEY_LEFTMETA
+            | evdev::Key::KEY_RIGHTMETA
+            | evdev::Key::KEY_LEFTSHIFT
+            | evdev::Key::KEY_RIGHTSHIFT
+            | evdev::Key::KEY_LEFTALT
+            | evdev::Key::KEY_RIGHTALT => KeyType::Mod,
+            evdev::Key::KEY_CAPSLOCK | evdev::Key::KEY_NUMLOCK | evdev::Key::KEY_SCROLLLOCK => {
+                KeyType::Lock
+            }
+            _ => KeyType::Normal,
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -24,6 +42,7 @@ pub enum KeyMessage {
     LockPress(u16),
     LockRelease(u16),
     Layer(Side, usize),
+    MouseLayer(bool),
 }
 
 pub struct Keyboard {
@@ -81,6 +100,14 @@ impl Keyboard {
             }
             KeyMessage::LockRelease(scan_code) => {
                 self.remove_lock(evdev::Key::new(scan_code));
+            }
+            KeyMessage::MouseLayer(enable) => {
+                // The mouse layer is added as the last layer.
+                if enable {
+                    self.layer.0 = self.layout.left.len() - 1;
+                } else {
+                    self.layer.0 = 0;
+                }
             }
             KeyMessage::Layer(side, idx) => {
                 debug!("[Layer] Switched: {:?} -> {:?}", side, idx);

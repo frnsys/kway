@@ -16,23 +16,26 @@ left:
       - key: KEY_B
     - - key: KEY_ENTER
       - key: KEY_SPACE
-        n: !Layer [Right, 1]
+        n:
+          Layer: [Right, 1]
         width: 3
       - key: KEY_BACKSPACE
 right:
   - - - key: KEY_Y
-        n: !Shift
+        n:
+          Modified: Shift
       - key: KEY_U
       - key: KEY_I
       - key: KEY_O
       - key: KEY_P
     - - key: KEY_H
-        w: !Select
-        e: !Select
+        w: Select
+        e: Select
       - key: KEY_J
       - key: KEY_K
       - key: KEY_L
-        n: !Shift
+        n:
+          Modified: Shift
       - key: KEY_SEMICOLON
     - - key: KEY_N
       - key: KEY_M
@@ -40,16 +43,19 @@ right:
       - key: KEY_DOT
       - key: KEY_SLASH
     - - key: KEY_BACKSPACE
-        w: !Delete
-        e: !Delete
+        w: Delete
+        e: Delete
+      - Pointer
       - key: KEY_SPACE
-        width: 3
-        w: !Arrow
-        e: !Arrow
-        n: !Arrow
-        s: !Arrow
+        width: 2
+        w: Arrow
+        e: Arrow
+        n: Arrow
+        s: Arrow
       - key: KEY_ENTER
-        w: !HideKeyboard
+        w: HideKeyboard
+        n: Scroll
+        s: Scroll
   - - - key: KEY_1
       - key: KEY_2
       - key: KEY_3
