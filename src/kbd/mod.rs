@@ -2,7 +2,8 @@ mod keymap;
 mod layout;
 mod session;
 
-pub use layout::{KeyAction, Layer, Layout};
+use layout::Side;
+pub use layout::{Layer, Layout, SwipeAction};
 use session::SessionState;
 use tracing::debug;
 use wayland_client::{Connection, EventQueue, protocol::wl_keyboard::KeyState};
@@ -21,15 +22,13 @@ pub enum KeyMessage {
     ModRelease(u16),
     LockPress(u16),
     LockRelease(u16),
-
-    LeftLayer(usize),
-    RightLayer(usize),
+    Layer(Side, usize),
 }
 
 pub struct Keyboard {
     session_state: SessionState,
     event_queue: EventQueue<SessionState>,
-    pub layout: Layout,
+    layout: Layout,
     layer: (usize, usize),
     modifiers: u32,
     locks: u32,
@@ -86,12 +85,10 @@ impl Keyboard {
             KeyMessage::LockRelease(scan_code) => {
                 self.remove_lock(evdev::Key::new(scan_code));
             }
-            KeyMessage::LeftLayer(idx) => {
-                self.layer.0 = idx;
-            }
-            KeyMessage::RightLayer(idx) => {
-                self.layer.1 = idx;
-            }
+            KeyMessage::Layer(side, idx) => match side {
+                Side::Left => self.layer.0 = idx,
+                Side::Right => self.layer.1 = idx,
+            },
         }
     }
 
@@ -175,5 +172,12 @@ impl Keyboard {
             evdev::Key::KEY_SCROLLLOCK => 32768,
             _ => 0,
         }
+    }
+
+    pub fn active_layers(&self) -> (&Layer, &Layer) {
+        (
+            &self.layout.left[self.layer.0],
+            &self.layout.right[self.layer.1],
+        )
     }
 }

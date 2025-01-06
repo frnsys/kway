@@ -9,7 +9,7 @@ use relm4::{
 };
 
 use crate::{
-    kbd::{self, KeyAction, KeyMessage, KeyType, Keyboard, Layout},
+    kbd::{self, KeyMessage, KeyType, Keyboard, SwipeAction},
     ptr::Pointer,
 };
 
@@ -130,7 +130,21 @@ fn setup_window(window: &mut gtk::Window, is_left: bool) {
 
 impl UIModel {
     fn render_keyboard(&self) {
-        let (left, right) = self.keyboard.layout.render(160, self.sender.clone());
+        // TODO make this the configurable key height
+        let geometry_unit = 160 / 100;
+
+        let (left, right) = self.keyboard.active_layers();
+
+        let left = left.render(geometry_unit, self.sender.clone());
+        left.set_margin_all(15);
+        left.set_align(gtk::Align::Center);
+        left.set_expand(true);
+
+        let right = right.render(geometry_unit, self.sender.clone());
+        right.set_margin_all(15);
+        right.set_align(gtk::Align::Center);
+        right.set_expand(true);
+
         self.window.0.set_child(Some(&left));
         self.window.1.set_child(Some(&right));
     }
@@ -197,36 +211,113 @@ impl kbd::Layer {
                         button.set_width_request(width);
                         button.set_height_request(geometry_unit);
 
-                        let press_sender = sender.clone();
-                        button.connect("pressed", true, move |_| {
-                            press_sender.input(KeyMessage::ButtonPress(scan_code).into());
+                        let sender_cb = sender.clone();
+                        button.connect("tap-pressed", true, move |_| {
+                            sender_cb.input(KeyMessage::ButtonPress(scan_code).into());
                             None
                         });
 
-                        let release_sender = sender.clone();
-                        button.connect("released", true, move |_| {
-                            release_sender.input(KeyMessage::ButtonRelease(scan_code).into());
+                        let sender_cb = sender.clone();
+                        button.connect("tap-released", true, move |_| {
+                            sender_cb.input(KeyMessage::ButtonRelease(scan_code).into());
                             None
                         });
 
-                        let swipe_sender = sender.clone();
-                        button.connect("swiped", true, move |args| {
+                        let key_cb = key.clone();
+                        let sender_cb = sender.clone();
+                        button.connect("swipe-pressed", true, move |args| {
                             let dir: Direction = unsafe { Direction::from_value(&args[1]) };
                             let action = match dir {
-                                Direction::Up => &key.up,
-                                Direction::Right => &key.right,
-                                Direction::Left => &key.left,
-                                Direction::Down => &key.down,
+                                Direction::Up => &key_cb.up,
+                                Direction::Right => &key_cb.right,
+                                Direction::Left => &key_cb.left,
+                                Direction::Down => &key_cb.down,
                             };
                             if let Some(action) = action {
                                 match action {
-                                    KeyAction::Key(key) => {
-                                        swipe_sender
-                                            .input(KeyMessage::ButtonPress(key.code()).into());
-                                        swipe_sender
+                                    SwipeAction::Key(key) => {
+                                        sender_cb.input(KeyMessage::ButtonPress(key.code()).into());
+                                        sender_cb
                                             .input(KeyMessage::ButtonRelease(key.code()).into());
                                     }
-                                    // TODO
+                                    SwipeAction::Shift => {
+                                        let modifier = evdev::Key::KEY_LEFTSHIFT.code();
+                                        sender_cb.input(KeyMessage::ModPress(modifier).into());
+                                        sender_cb.input(KeyMessage::ButtonPress(scan_code).into());
+                                        sender_cb
+                                            .input(KeyMessage::ButtonRelease(scan_code).into());
+                                        sender_cb.input(KeyMessage::ModRelease(modifier).into());
+                                    }
+                                    SwipeAction::Ctrl => {
+                                        let modifier = evdev::Key::KEY_LEFTCTRL.code();
+                                        sender_cb.input(KeyMessage::ModPress(modifier).into());
+                                        sender_cb.input(KeyMessage::ButtonPress(scan_code).into());
+                                        sender_cb
+                                            .input(KeyMessage::ButtonRelease(scan_code).into());
+                                        sender_cb.input(KeyMessage::ModRelease(modifier).into());
+                                    }
+                                    SwipeAction::Alt => {
+                                        let modifier = evdev::Key::KEY_LEFTALT.code();
+                                        sender_cb.input(KeyMessage::ModPress(modifier).into());
+                                        sender_cb.input(KeyMessage::ButtonPress(scan_code).into());
+                                        sender_cb
+                                            .input(KeyMessage::ButtonRelease(scan_code).into());
+                                        sender_cb.input(KeyMessage::ModRelease(modifier).into());
+                                    }
+                                    SwipeAction::Meta => {
+                                        let modifier = evdev::Key::KEY_LEFTMETA.code();
+                                        sender_cb.input(KeyMessage::ModPress(modifier).into());
+                                        sender_cb.input(KeyMessage::ButtonPress(scan_code).into());
+                                        sender_cb
+                                            .input(KeyMessage::ButtonRelease(scan_code).into());
+                                        sender_cb.input(KeyMessage::ModRelease(modifier).into());
+                                    }
+                                    SwipeAction::Layer(side, idx) => {
+                                        sender_cb.input(KeyMessage::Layer(*side, *idx).into());
+                                    }
+                                    SwipeAction::Arrow => {
+                                        let key = match dir {
+                                            Direction::Up => evdev::Key::KEY_UP,
+                                            Direction::Right => evdev::Key::KEY_RIGHT,
+                                            Direction::Left => evdev::Key::KEY_LEFT,
+                                            Direction::Down => evdev::Key::KEY_DOWN,
+                                        };
+                                        sender_cb.input(KeyMessage::ButtonPress(key.code()).into());
+                                        sender_cb
+                                            .input(KeyMessage::ButtonRelease(key.code()).into());
+                                    }
+                                    SwipeAction::Scroll => {
+                                        let key = match dir {
+                                            Direction::Up => evdev::Key::KEY_SCROLLUP,
+                                            Direction::Right => evdev::Key::KEY_RIGHT,
+                                            Direction::Left => evdev::Key::KEY_LEFT,
+                                            Direction::Down => evdev::Key::KEY_SCROLLDOWN,
+                                        };
+                                        sender_cb.input(KeyMessage::ButtonPress(key.code()).into());
+                                        sender_cb
+                                            .input(KeyMessage::ButtonRelease(key.code()).into());
+                                    }
+                                }
+                            }
+                            None
+                        });
+
+                        let key_cb = key.clone();
+                        let sender_cb = sender.clone();
+                        button.connect("swipe-released", true, move |args| {
+                            let dir: Direction = unsafe { Direction::from_value(&args[1]) };
+                            let action = match dir {
+                                Direction::Up => &key_cb.up,
+                                Direction::Right => &key_cb.right,
+                                Direction::Left => &key_cb.left,
+                                Direction::Down => &key_cb.down,
+                            };
+                            if let Some(action) = action {
+                                match action {
+                                    // Swipe-releasing is only relevant for the layer swipe action.
+                                    SwipeAction::Layer(side, idx) => {
+                                        sender_cb.input(KeyMessage::Layer(*side, *idx).into());
+                                    }
                                     _ => (),
                                 }
                             }
@@ -242,26 +333,5 @@ impl kbd::Layer {
         }
 
         container
-    }
-}
-
-impl Layout {
-    fn render(&self, height: i32, sender: ComponentSender<UIModel>) -> (gtk::Box, gtk::Box) {
-        let geometry_unit = height / self.height();
-        let Self { left, right } = self;
-
-        // TODO get current layer
-        let left = left[0].render(geometry_unit, sender.clone());
-        left.set_margin_all(15);
-        left.set_align(gtk::Align::Center);
-        left.set_expand(true);
-
-        // TODO get current layer
-        let right = right[0].render(geometry_unit, sender);
-        right.set_margin_all(15);
-        right.set_align(gtk::Align::Center);
-        right.set_expand(true);
-
-        (left, right)
     }
 }

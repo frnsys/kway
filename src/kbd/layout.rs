@@ -4,16 +4,18 @@ use crate::kbd::KeyType;
 
 use super::keymap::default_glyph;
 
+/// A `Layout` has two [`Side`]s,
+/// each of which consists of one or more [`Layer`]s.
 #[derive(Debug, Deserialize)]
 pub struct Layout {
     pub left: Vec<Layer>,
     pub right: Vec<Layer>,
 }
-impl Layout {
-    pub fn height(&self) -> i32 {
-        // TODO
-        100
-    }
+
+#[derive(Debug, Clone, Copy, Deserialize)]
+pub enum Side {
+    Left,
+    Right,
 }
 
 impl Default for Layout {
@@ -39,16 +41,16 @@ pub struct KeyDef {
     pub key: evdev::Key,
 
     #[serde(default, rename = "n")]
-    pub up: Option<KeyAction>,
+    pub up: Option<SwipeAction>,
 
     #[serde(default, rename = "e")]
-    pub right: Option<KeyAction>,
+    pub right: Option<SwipeAction>,
 
     #[serde(default, rename = "w")]
-    pub left: Option<KeyAction>,
+    pub left: Option<SwipeAction>,
 
     #[serde(default, rename = "s")]
-    pub down: Option<KeyAction>,
+    pub down: Option<SwipeAction>,
 
     #[serde(default)]
     width: Option<u8>,
@@ -60,7 +62,7 @@ impl Default for KeyDef {
     fn default() -> Self {
         Self {
             key: evdev::Key::KEY_A,
-            up: Some(KeyAction::Shift),
+            up: Some(SwipeAction::Shift),
             right: None,
             left: None,
             down: None,
@@ -79,6 +81,7 @@ impl From<evdev::Key> for KeyDef {
     }
 }
 impl KeyDef {
+    /// A string representing this key.
     pub fn glyph(&self) -> String {
         self.label
             .clone()
@@ -121,13 +124,53 @@ impl KeyDef {
     }
 }
 
+/// Swipe actions are triggered by directional swipes on keys.
+///
+/// There are mode of swipe actions:
+/// - Fire: a one-shot; immediate press-and-release
+/// - Hold: swipe up and hold to fire press, release to fire release.
+/// - Drag: swipe and hold, and each incremental move fires press-and-release.
+///
+/// Each action has an assumed mode:
+/// - Layer -> Hold
+/// - Arrow -> Drag
+/// - Scroll -> Drag
+/// - Everything else -> Fire
 #[derive(Debug, Clone, Deserialize)]
-pub enum KeyAction {
+pub enum SwipeAction {
+    /// Fire a regular key press.
     Key(evdev::Key),
-    Ctrl,
-    Shift,
-    Super,
 
-    // Drag cursor
+    /// Switch layer
+    Layer(Side, usize),
+
+    /// Fire the pressed key with Alt.
+    Alt,
+
+    /// Fire the pressed key with Ctrl.
+    Ctrl,
+
+    /// Fire the pressed key with Shift.
+    Shift,
+
+    /// Fire the pressed key with Meta/Super.
+    Meta,
+
+    /// Drag cursor in the swipe direction.
     Arrow,
+
+    /// Mouse scroll in the swipe direction.
+    /// This is only meaningful for up/down swipes.
+    /// Left/right swipes will instead send left/right arrows.
+    Scroll,
+    // TODO try using shift+arrow left/right
+    // Select text in the swipe direction.
+    // This is only meaningful for left/right swipes.
+    // Select,
+
+    // TODO
+    // TODO try using shift+arrow left/right and then delete on release
+    // Delete text in the swipe direction.
+    // This is only meaningful for left/right swipes.
+    // Delete,
 }

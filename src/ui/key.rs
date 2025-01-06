@@ -22,6 +22,17 @@ pub struct ButtonInner {
     secondary_content: Arc<RwLock<Option<String>>>,
 }
 
+/// Minimum velocity to trigger a swipe.
+const SWIPE_MIN_VELOCITY: f64 = 100.;
+
+/// Swipe angle must be w/in this number of degrees
+/// to trigger a directional swipe.
+const SWIPE_ANGLE_TOLERANCE: f64 = 15.;
+
+/// The velocity of an incremental swipe
+/// to fire a drag swipe action.
+const DRAG_TRIGGER_VELOCITY: f64 = 50.;
+
 #[glib::object_subclass]
 impl ObjectSubclass for ButtonInner {
     const NAME: &'static str = "KeyButton";
@@ -71,27 +82,28 @@ impl ObjectImpl for ButtonInner {
         let obj_cb = obj.clone();
         let state_cb = Arc::clone(&state);
         gesture.connect_swipe(move |gesture, vel_x, vel_y| {
-            const SWIPE_MIN_DIST: f64 = 100.;
-            if vel_x.abs() < SWIPE_MIN_DIST && vel_y.abs() < SWIPE_MIN_DIST {
+            if vel_x.abs() < SWIPE_MIN_VELOCITY && vel_y.abs() < SWIPE_MIN_VELOCITY {
                 return;
             } else if state_cb.load().can_swipe() {
                 state_cb.store(Arc::new(KeyState::Swiping));
                 debug!("[Swipe] velocity={:?},{:?}", vel_x, vel_y);
 
-                let angle = calc_angle_deg(vel_x, vel_y);
-                debug!("[Swipe] angle={:?}", angle);
-
                 if let Some(dir) = direction(vel_x, vel_y) {
                     debug!("[Swipe] direction={:?}", dir);
-                    obj_cb.emit_by_name::<()>("swiped", &[&dir.to_value()]);
+                    obj_cb.emit_by_name::<()>("swipe-pressed", &[&dir.to_value()]);
                 }
                 gesture.set_state(gtk::EventSequenceState::Claimed);
             }
         });
 
-        gesture.connect_update(move |_gesture, _| {
-            // TODO use this for moving the cursor
-            // println!("{:?}", gesture.velocity());
+        gesture.connect_update(move |gesture, _| {
+            if let Some((vel_x, vel_y)) = gesture.velocity() {
+                if let Some(dir) = direction(vel_x, vel_y) {
+                    debug!("[Drag] direction={:?}", dir);
+                    // TODO
+                    // obj_cb.emit_by_name::<()>("swipe-pressed", &[&dir.to_value()]);
+                }
+            }
         });
 
         let state_cb = Arc::clone(&state);
@@ -110,12 +122,12 @@ impl ObjectImpl for ButtonInner {
             let state_cb = state_cb.clone();
             glib::timeout_add_once(Duration::from_millis(60), move || {
                 if state_cb.load().can_press() {
-                    debug!("[Click] pressed");
+                    debug!("[Tap] pressed");
                     let obj = weak_ref.upgrade().unwrap();
                     state_cb.store(Arc::new(KeyState::Pressed));
-                    obj.obj().emit_by_name::<()>("pressed", &[]);
+                    obj.obj().emit_by_name::<()>("tap-pressed", &[]);
                 } else {
-                    debug!("[Click] swipe locked");
+                    debug!("[Tap] swipe locked");
                 }
             });
         });
@@ -123,7 +135,7 @@ impl ObjectImpl for ButtonInner {
         let obj_cb = obj.clone();
         let state_cb = Arc::clone(&state);
         gesture.connect_released(move |_gesture, _, _, _| {
-            debug!("[Click] released");
+            debug!("[Tap] released");
             state_cb.store(Arc::new(KeyState::Idle));
             obj_cb.emit_by_name::<()>("released", &[]);
         });
@@ -147,9 +159,12 @@ impl ObjectImpl for ButtonInner {
         static SIGNALS: OnceLock<Vec<Signal>> = OnceLock::new();
         SIGNALS.get_or_init(|| {
             vec![
-                Signal::builder("swiped").param_types([Type::U8]).build(),
-                Signal::builder("pressed").build(),
-                Signal::builder("released").build(),
+                Signal::builder("swipe-pressed")
+                    .param_types([Type::U8])
+                    .build(),
+                Signal::builder("swipe-released").build(),
+                Signal::builder("tap-pressed").build(),
+                Signal::builder("tap-released").build(),
             ]
         })
     }
@@ -240,20 +255,17 @@ unsafe impl FromValue<'_> for Direction {
     }
 }
 
-fn calc_angle_deg(x: f64, y: f64) -> f64 {
-    let rad = y.atan2(x);
-    rad * (180.0 / std::f64::consts::PI)
-}
 fn direction(x: f64, y: f64) -> Option<Direction> {
-    const ANGLE_TOLERANCE: f64 = 15.;
-    let deg = calc_angle_deg(x, y);
-    if (-90. - deg).abs() <= ANGLE_TOLERANCE {
+    let rad = y.atan2(x);
+    let deg = rad * (180.0 / std::f64::consts::PI);
+    debug!("[Swipe] angle={:?}", deg);
+    if (-90. - deg).abs() <= SWIPE_ANGLE_TOLERANCE {
         Some(Direction::Up)
-    } else if deg.abs() <= ANGLE_TOLERANCE {
+    } else if deg.abs() <= SWIPE_ANGLE_TOLERANCE {
         Some(Direction::Right)
-    } else if (180. - deg).abs() <= ANGLE_TOLERANCE {
+    } else if (180. - deg).abs() <= SWIPE_ANGLE_TOLERANCE {
         Some(Direction::Left)
-    } else if (90. - deg).abs() <= ANGLE_TOLERANCE {
+    } else if (90. - deg).abs() <= SWIPE_ANGLE_TOLERANCE {
         Some(Direction::Down)
     } else {
         None

@@ -2,6 +2,7 @@ use std::{ffi::CString, fs::File, io::Write, path::PathBuf};
 
 use xkbcommon::xkb;
 
+// NOTE: This assumes US layout.
 fn default_keymap() -> xkb::State {
     let context = xkb::Context::new(xkb::CONTEXT_NO_FLAGS);
     let keymap = xkb::Keymap::new_from_names(
@@ -17,6 +18,7 @@ fn default_keymap() -> xkb::State {
     xkb::State::new(&keymap)
 }
 
+/// Get a default glyph/character for a key.
 pub fn default_glyph(key: &evdev::Key) -> String {
     let keymap = default_keymap();
 
