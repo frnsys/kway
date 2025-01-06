@@ -163,14 +163,14 @@ pub enum SwipeAction {
     /// This is only meaningful for up/down swipes.
     /// Left/right swipes will instead send left/right arrows.
     Scroll,
-    // TODO try using shift+arrow left/right
-    // Select text in the swipe direction.
-    // This is only meaningful for left/right swipes.
-    // Select,
+
+    /// Select text in the swipe direction.
+    /// This is only meaningful for left/right swipes.
+    Select,
 
     // TODO
     // TODO try using shift+arrow left/right and then delete on release
     // Delete text in the swipe direction.
     // This is only meaningful for left/right swipes.
-    // Delete,
+    Delete,
 }

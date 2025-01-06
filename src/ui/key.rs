@@ -36,6 +36,11 @@ const SWIPE_MIN_DISTANCE: f64 = 5.;
 /// to trigger a directional swipe.
 const SWIPE_ANGLE_TOLERANCE: f64 = 15.;
 
+/// Minimum a swipe must increment to trigger repeat presses.
+const SWIPE_MIN_INCREMENT: f64 = 5.;
+
+/// How long a key must be pressed in a non-swipe
+/// to trigger hold-and-repeat.
 const HOLD_TERM: u64 = 500;
 
 #[glib::object_subclass]
@@ -53,17 +58,25 @@ impl ObjectSubclass for ButtonInner {
 
 enum KeyState {
     Idle,
+    Unclaimed,
     Pressed,
-    Swiping,
+    Swiping { x: f64, y: f64 },
 }
 
 impl KeyState {
     fn can_press(&self) -> bool {
-        matches!(self, KeyState::Idle)
+        matches!(self, KeyState::Unclaimed)
     }
 
     fn can_swipe(&self) -> bool {
-        matches!(self, KeyState::Idle)
+        matches!(self, KeyState::Unclaimed)
+    }
+
+    fn last_swipe_offset(&self) -> Option<(f64, f64)> {
+        match self {
+            KeyState::Swiping { x, y } => Some((*x, *y)),
+            _ => None,
+        }
     }
 }
 
@@ -86,17 +99,17 @@ impl ObjectImpl for ButtonInner {
         let weak_ref = self.downgrade();
         let state_cb = Arc::clone(&state);
         gesture.connect_drag_begin(move |_gesture, _x, _y| {
+            state_cb.store(Arc::new(KeyState::Unclaimed));
+
             let weak_ref = weak_ref.clone();
             let state_cb = state_cb.clone();
             timer_cb.store(Arc::new(Instant::now()));
             glib::timeout_add_once(Duration::from_millis(HOLD_TERM), move || {
                 if state_cb.load().can_press() {
-                    // TODO also check that key is still pressed down/not already released
-                    // debug!("[Hold]");
-                    // let obj = weak_ref.upgrade().unwrap();
-                    // state_cb.store(Arc::new(KeyState::Pressed));
-                    // gesture.set_state(gtk::EventSequenceState::Claimed);
-                    // obj.obj().emit_by_name::<()>("tap-pressed", &[]);
+                    debug!("[Hold]");
+                    let obj = weak_ref.upgrade().unwrap();
+                    state_cb.store(Arc::new(KeyState::Pressed));
+                    obj.obj().emit_by_name::<()>("tap-pressed", &[]);
                 }
             });
         });
@@ -108,14 +121,28 @@ impl ObjectImpl for ButtonInner {
                 if (x.abs() >= SWIPE_MIN_DISTANCE || y.abs() >= SWIPE_MIN_DISTANCE)
                     && state_cb.load().can_swipe()
                 {
-                    state_cb.store(Arc::new(KeyState::Swiping));
+                    state_cb.store(Arc::new(KeyState::Swiping { x, y }));
                     debug!("[Swipe] offset={:?},{:?}", x, y);
 
                     if let Some(dir) = direction(x, y) {
                         debug!("[Swipe] direction={:?}", dir);
                         obj_cb.emit_by_name::<()>("swipe-pressed", &[&dir.to_value()]);
                     }
-                    gesture.set_state(gtk::EventSequenceState::Claimed);
+                } else if let Some((last_x, last_y)) = state_cb.load().last_swipe_offset() {
+                    let dist = distance(last_x, last_y, x, y);
+                    let delta_x = x - last_x;
+                    let delta_y = y - last_y;
+                    if dist >= SWIPE_MIN_INCREMENT {
+                        debug!(
+                            "[Swipe INCREMENT] offset={:?},{:?} dist={:?}",
+                            delta_x, delta_y, dist
+                        );
+                        state_cb.store(Arc::new(KeyState::Swiping { x, y }));
+                        if let Some(dir) = direction(delta_x, delta_y) {
+                            debug!("[Swipe] direction={:?}", dir);
+                            obj_cb.emit_by_name::<()>("swipe-pressed", &[&dir.to_value()]);
+                        }
+                    }
                 }
             }
         });
@@ -244,4 +271,10 @@ fn direction(x: f64, y: f64) -> Option<Direction> {
     } else {
         None
     }
+}
+
+fn distance(x1: f64, y1: f64, x2: f64, y2: f64) -> f64 {
+    let dx = x2 - x1;
+    let dy = y2 - y1;
+    (dx.powi(2) + dy.powi(2)).sqrt()
 }

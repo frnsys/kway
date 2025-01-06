@@ -290,6 +290,23 @@ impl kbd::Layer {
     }
 }
 
+const ALT: u16 = 56;
+const CTRL: u16 = 29;
+const SHIFT: u16 = 42;
+const META: u16 = 125;
+
+fn send_key(key: u16, sender: &ComponentSender<UIModel>) {
+    sender.input(KeyMessage::ButtonPress(key).into());
+    sender.input(KeyMessage::ButtonRelease(key).into());
+}
+
+fn send_mod_key(modifier: u16, key: u16, sender: &ComponentSender<UIModel>) {
+    sender.input(KeyMessage::ModPress(modifier).into());
+    sender.input(KeyMessage::ButtonPress(key).into());
+    sender.input(KeyMessage::ButtonRelease(key).into());
+    sender.input(KeyMessage::ModRelease(modifier).into());
+}
+
 fn handle_swipe_action_press(
     key_def: &KeyDef,
     action: &SwipeAction,
@@ -300,36 +317,19 @@ fn handle_swipe_action_press(
 
     match action {
         SwipeAction::Key(key) => {
-            sender.input(KeyMessage::ButtonPress(key.code()).into());
-            sender.input(KeyMessage::ButtonRelease(key.code()).into());
+            send_key(key.code(), sender);
         }
         SwipeAction::Shift => {
-            let modifier = evdev::Key::KEY_LEFTSHIFT.code();
-            sender.input(KeyMessage::ModPress(modifier).into());
-            sender.input(KeyMessage::ButtonPress(scan_code).into());
-            sender.input(KeyMessage::ButtonRelease(scan_code).into());
-            sender.input(KeyMessage::ModRelease(modifier).into());
+            send_mod_key(SHIFT, scan_code, sender);
         }
         SwipeAction::Ctrl => {
-            let modifier = evdev::Key::KEY_LEFTCTRL.code();
-            sender.input(KeyMessage::ModPress(modifier).into());
-            sender.input(KeyMessage::ButtonPress(scan_code).into());
-            sender.input(KeyMessage::ButtonRelease(scan_code).into());
-            sender.input(KeyMessage::ModRelease(modifier).into());
+            send_mod_key(CTRL, scan_code, sender);
         }
         SwipeAction::Alt => {
-            let modifier = evdev::Key::KEY_LEFTALT.code();
-            sender.input(KeyMessage::ModPress(modifier).into());
-            sender.input(KeyMessage::ButtonPress(scan_code).into());
-            sender.input(KeyMessage::ButtonRelease(scan_code).into());
-            sender.input(KeyMessage::ModRelease(modifier).into());
+            send_mod_key(ALT, scan_code, sender);
         }
         SwipeAction::Meta => {
-            let modifier = evdev::Key::KEY_LEFTMETA.code();
-            sender.input(KeyMessage::ModPress(modifier).into());
-            sender.input(KeyMessage::ButtonPress(scan_code).into());
-            sender.input(KeyMessage::ButtonRelease(scan_code).into());
-            sender.input(KeyMessage::ModRelease(modifier).into());
+            send_mod_key(META, scan_code, sender);
         }
         SwipeAction::Layer(side, idx) => {
             sender.input(KeyMessage::Layer(*side, *idx).into());
@@ -342,8 +342,25 @@ fn handle_swipe_action_press(
                 Direction::Left => evdev::Key::KEY_LEFT,
                 Direction::Down => evdev::Key::KEY_DOWN,
             };
-            sender.input(KeyMessage::ButtonPress(key.code()).into());
-            sender.input(KeyMessage::ButtonRelease(key.code()).into());
+            send_key(key.code(), sender);
+        }
+        SwipeAction::Select => {
+            let key = match dir {
+                Direction::Up => evdev::Key::KEY_UP,
+                Direction::Right => evdev::Key::KEY_RIGHT,
+                Direction::Left => evdev::Key::KEY_LEFT,
+                Direction::Down => evdev::Key::KEY_DOWN,
+            };
+            send_mod_key(SHIFT, key.code(), sender);
+        }
+        SwipeAction::Delete => {
+            let key = match dir {
+                Direction::Up => evdev::Key::KEY_UP,
+                Direction::Right => evdev::Key::KEY_RIGHT,
+                Direction::Left => evdev::Key::KEY_LEFT,
+                Direction::Down => evdev::Key::KEY_DOWN,
+            };
+            send_mod_key(SHIFT, key.code(), sender);
         }
         SwipeAction::Scroll => {
             let key = match dir {
@@ -352,8 +369,7 @@ fn handle_swipe_action_press(
                 Direction::Left => evdev::Key::KEY_LEFT,
                 Direction::Down => evdev::Key::KEY_SCROLLDOWN,
             };
-            sender.input(KeyMessage::ButtonPress(key.code()).into());
-            sender.input(KeyMessage::ButtonRelease(key.code()).into());
+            send_key(key.code(), sender);
         }
     }
 }
@@ -369,6 +385,14 @@ fn handle_swipe_action_release(
         SwipeAction::Layer(side, _) => {
             sender.input(KeyMessage::Layer(*side, 0).into());
             sender.input(UIMessage::LayoutChanged);
+        }
+
+        // TODO the downside with this approach, which doesn't
+        // require any specific input field API, is that it will
+        // still delete one character on an empty selection;
+        // i.e. normal backspace behavior.
+        SwipeAction::Delete => {
+            send_key(evdev::Key::KEY_BACKSPACE.code(), sender);
         }
         _ => (),
     }

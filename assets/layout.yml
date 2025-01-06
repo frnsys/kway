@@ -27,7 +27,8 @@ right:
       - key: KEY_O
       - key: KEY_P
     - - key: KEY_H
-        w: !Key KEY_SPACE
+        w: !Select
+        e: !Select
       - key: KEY_J
       - key: KEY_K
       - key: KEY_L
@@ -39,8 +40,12 @@ right:
       - key: KEY_DOT
       - key: KEY_SLASH
     - - key: KEY_BACKSPACE
+        w: !Delete
+        e: !Delete
       - key: KEY_SPACE
         width: 3
+        w: !Arrow
+        e: !Arrow
       - key: KEY_ENTER
   - - - key: KEY_1
       - key: KEY_2
