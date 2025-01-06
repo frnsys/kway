@@ -14,9 +14,24 @@ left:
       - key: KEY_C
       - key: KEY_V
       - key: KEY_B
-
+  - - - key: KEY_X
+      - key: KEY_X
+      - key: KEY_X
+      - key: KEY_X
+      - key: KEY_X
+    - - key: KEY_X
+      - key: KEY_X
+      - key: KEY_X
+      - key: KEY_X
+      - key: KEY_X
+    - - key: KEY_X
+      - key: KEY_X
+      - key: KEY_X
+      - key: KEY_X
+      - key: KEY_X
 right:
   - - - key: KEY_Y
+        n: Shift
       - key: KEY_U
       - key: KEY_I
       - key: KEY_O
@@ -24,7 +39,9 @@ right:
     - - key: KEY_H
       - key: KEY_J
       - key: KEY_K
+        n: !Layer [Left, 1]
       - key: KEY_L
+        n: Shift
       - key: KEY_SEMICOLON
     - - key: KEY_N
       - key: KEY_M

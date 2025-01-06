@@ -62,7 +62,7 @@ impl Default for KeyDef {
     fn default() -> Self {
         Self {
             key: evdev::Key::KEY_A,
-            up: Some(SwipeAction::Shift),
+            up: None,
             right: None,
             left: None,
             down: None,

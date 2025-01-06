@@ -1,6 +1,6 @@
 use std::{
     sync::{Arc, OnceLock, RwLock},
-    time::Duration,
+    time::{Duration, Instant},
 };
 
 use arc_swap::ArcSwap;
@@ -22,16 +22,12 @@ pub struct ButtonInner {
     secondary_content: Arc<RwLock<Option<String>>>,
 }
 
-/// Minimum velocity to trigger a swipe.
-const SWIPE_MIN_VELOCITY: f64 = 100.;
+/// Minimum distance to trigger a swipe.
+const SWIPE_MIN_DISTANCE: f64 = 5.;
 
 /// Swipe angle must be w/in this number of degrees
 /// to trigger a directional swipe.
 const SWIPE_ANGLE_TOLERANCE: f64 = 15.;
-
-/// The velocity of an incremental swipe
-/// to fire a drag swipe action.
-const DRAG_TRIGGER_VELOCITY: f64 = 50.;
 
 #[glib::object_subclass]
 impl ObjectSubclass for ButtonInner {
@@ -77,80 +73,64 @@ impl ObjectImpl for ButtonInner {
 
         let state = Arc::new(ArcSwap::from_pointee(KeyState::Idle));
 
-        let gesture = gtk::GestureSwipe::new();
-
-        let obj_cb = obj.clone();
+        let gesture = gtk::GestureDrag::new();
         let state_cb = Arc::clone(&state);
-        gesture.connect_swipe(move |gesture, vel_x, vel_y| {
-            if vel_x.abs() < SWIPE_MIN_VELOCITY && vel_y.abs() < SWIPE_MIN_VELOCITY {
-                return;
-            } else if state_cb.load().can_swipe() {
-                state_cb.store(Arc::new(KeyState::Swiping));
-                debug!("[Swipe] velocity={:?},{:?}", vel_x, vel_y);
 
-                if let Some(dir) = direction(vel_x, vel_y) {
-                    debug!("[Swipe] direction={:?}", dir);
-                    obj_cb.emit_by_name::<()>("swipe-pressed", &[&dir.to_value()]);
-                }
-                gesture.set_state(gtk::EventSequenceState::Claimed);
-            }
-        });
+        let timer = Arc::new(ArcSwap::from_pointee(Instant::now()));
+        let timer_cb = Arc::clone(&timer);
 
-        gesture.connect_update(move |gesture, _| {
-            if let Some((vel_x, vel_y)) = gesture.velocity() {
-                if let Some(dir) = direction(vel_x, vel_y) {
-                    debug!("[Drag] direction={:?}", dir);
-                    // TODO
-                    // obj_cb.emit_by_name::<()>("swipe-pressed", &[&dir.to_value()]);
-                }
-            }
-        });
-
-        let state_cb = Arc::clone(&state);
-        gesture.connect_sequence_state_changed(move |_gesture, _, state| {
-            if state == gtk::EventSequenceState::Claimed {
-                state_cb.store(Arc::new(KeyState::Idle));
-            }
-        });
-        obj.add_controller(gesture);
-
-        let gesture = gtk::GestureClick::new();
+        let gesture = gtk::GestureDrag::new();
         let weak_ref = self.downgrade();
         let state_cb = Arc::clone(&state);
-        gesture.connect_pressed(move |_gesture, _, _, _| {
+        gesture.connect_drag_begin(move |gesture, _x, _y| {
             let weak_ref = weak_ref.clone();
             let state_cb = state_cb.clone();
-            glib::timeout_add_once(Duration::from_millis(60), move || {
+            timer_cb.store(Arc::new(Instant::now()));
+            glib::timeout_add_once(Duration::from_millis(250), move || {
                 if state_cb.load().can_press() {
-                    debug!("[Tap] pressed");
+                    // TODO also check that key is still pressed down/not already released
+                    debug!("[Hold]");
                     let obj = weak_ref.upgrade().unwrap();
                     state_cb.store(Arc::new(KeyState::Pressed));
-                    obj.obj().emit_by_name::<()>("tap-pressed", &[]);
-                } else {
-                    debug!("[Tap] swipe locked");
+                    // gesture.set_state(gtk::EventSequenceState::Claimed);
+                    // obj.obj().emit_by_name::<()>("tap-pressed", &[]);
                 }
             });
         });
 
         let obj_cb = obj.clone();
         let state_cb = Arc::clone(&state);
-        gesture.connect_released(move |_gesture, _, _, _| {
-            debug!("[Tap] released");
+        gesture.connect_drag_update(move |gesture, _x, _y| {
+            if let Some((x, y)) = gesture.offset() {
+                if (x.abs() >= SWIPE_MIN_DISTANCE || y.abs() >= SWIPE_MIN_DISTANCE)
+                    && state_cb.load().can_swipe()
+                {
+                    state_cb.store(Arc::new(KeyState::Swiping));
+                    debug!("[Swipe] offset={:?},{:?}", x, y);
+
+                    if let Some(dir) = direction(x, y) {
+                        debug!("[Swipe] direction={:?}", dir);
+                        obj_cb.emit_by_name::<()>("swipe-pressed", &[&dir.to_value()]);
+                    }
+                    gesture.set_state(gtk::EventSequenceState::Claimed);
+                }
+            }
+        });
+
+        let obj_cb = obj.clone();
+        let state_cb = Arc::clone(&state);
+        gesture.connect_drag_end(move |gesture, _x, _y| {
+            // If this hasn't yet been claimed as a swipe or a hold
+            // then treat it as a tap.
+            if state_cb.load().can_press() {
+                debug!("[Tap]");
+                state_cb.store(Arc::new(KeyState::Pressed));
+                obj_cb.emit_by_name::<()>("tap-pressed", &[]);
+            }
+
+            debug!("[Release]");
             state_cb.store(Arc::new(KeyState::Idle));
             obj_cb.emit_by_name::<()>("released", &[]);
-        });
-        obj.add_controller(gesture);
-
-        let gesture = gtk::GestureDrag::new();
-        gesture.connect_drag_begin(move |_gesture, _x, _y| {
-            debug!("[Drag] begin");
-        });
-        gesture.connect_drag_update(move |_gesture, _x, _y| {
-            debug!("[Drag] update");
-        });
-        gesture.connect_drag_end(move |_gesture, _x, _y| {
-            debug!("[Drag] end");
-            // println!("offset: {:?}", gesture.offset());
         });
         obj.add_controller(gesture);
     }
@@ -162,9 +142,8 @@ impl ObjectImpl for ButtonInner {
                 Signal::builder("swipe-pressed")
                     .param_types([Type::U8])
                     .build(),
-                Signal::builder("swipe-released").build(),
                 Signal::builder("tap-pressed").build(),
-                Signal::builder("tap-released").build(),
+                Signal::builder("released").build(),
             ]
         })
     }
@@ -223,7 +202,7 @@ impl Default for KeyButton {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum Direction {
     Up,
     Left,

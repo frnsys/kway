@@ -1,5 +1,8 @@
 mod key;
 
+use std::sync::Arc;
+
+use arc_swap::{ArcSwap, ArcSwapOption};
 use gdk4::{glib::value::FromValue, prelude::ObjectExt};
 use gtk::prelude::{ApplicationExt, BoxExt, GtkWindowExt, ToggleButtonExt, WidgetExt};
 use gtk4_layer_shell::{Edge, KeyboardMode, Layer, LayerShell};
@@ -7,6 +10,7 @@ use relm4::{
     ComponentParts, ComponentSender, RelmWidgetExt, SimpleComponent,
     gtk::{self, prelude::GtkApplicationExt},
 };
+use tracing::debug;
 
 use crate::{
     kbd::{self, KeyMessage, KeyType, Keyboard, SwipeAction},
@@ -24,11 +28,14 @@ pub struct UIModel {
     window: (gtk::Window, gtk::Window),
     sender: ComponentSender<Self>,
     keyboard: Keyboard,
+    left: Vec<gtk::Box>,
+    right: Vec<gtk::Box>,
 }
 
 #[derive(Debug)]
 pub enum UIMessage {
     Keyboard(KeyMessage),
+    LayoutChanged,
     AppQuit,
 }
 impl From<KeyMessage> for UIMessage {
@@ -76,9 +83,22 @@ impl SimpleComponent for UIModel {
 
         let (keyboard, pointer) = handle;
 
+        // TODO make this the configurable key height
+        let geometry_unit = 160 / 100;
+        let left_halves: Vec<_> = keyboard
+            .left_layers()
+            .map(|layer| layer.render(geometry_unit, sender.clone()))
+            .collect();
+        let right_halves: Vec<_> = keyboard
+            .right_layers()
+            .map(|layer| layer.render(geometry_unit, sender.clone()))
+            .collect();
+
         let model = UIModel {
             keyboard,
             window: (left, right),
+            left: left_halves,
+            right: right_halves,
             sender,
         };
         model.render_keyboard();
@@ -101,6 +121,9 @@ impl SimpleComponent for UIModel {
         match msg {
             UIMessage::Keyboard(msg) => {
                 self.keyboard.handle(msg);
+            }
+            UIMessage::LayoutChanged => {
+                self.render_keyboard();
             }
             UIMessage::AppQuit => {
                 self.keyboard.destroy();
@@ -130,23 +153,9 @@ fn setup_window(window: &mut gtk::Window, is_left: bool) {
 
 impl UIModel {
     fn render_keyboard(&self) {
-        // TODO make this the configurable key height
-        let geometry_unit = 160 / 100;
-
-        let (left, right) = self.keyboard.active_layers();
-
-        let left = left.render(geometry_unit, self.sender.clone());
-        left.set_margin_all(15);
-        left.set_align(gtk::Align::Center);
-        left.set_expand(true);
-
-        let right = right.render(geometry_unit, self.sender.clone());
-        right.set_margin_all(15);
-        right.set_align(gtk::Align::Center);
-        right.set_expand(true);
-
-        self.window.0.set_child(Some(&left));
-        self.window.1.set_child(Some(&right));
+        let (left, right) = self.keyboard.layer;
+        self.window.0.set_child(Some(&self.left[left]));
+        self.window.1.set_child(Some(&self.right[right]));
     }
 }
 
@@ -217,14 +226,11 @@ impl kbd::Layer {
                             None
                         });
 
-                        let sender_cb = sender.clone();
-                        button.connect("tap-released", true, move |_| {
-                            sender_cb.input(KeyMessage::ButtonRelease(scan_code).into());
-                            None
-                        });
+                        let state = Arc::new(ArcSwapOption::from(None));
 
                         let key_cb = key.clone();
                         let sender_cb = sender.clone();
+                        let state_cb = state.clone();
                         button.connect("swipe-pressed", true, move |args| {
                             let dir: Direction = unsafe { Direction::from_value(&args[1]) };
                             let action = match dir {
@@ -234,6 +240,8 @@ impl kbd::Layer {
                                 Direction::Down => &key_cb.down,
                             };
                             if let Some(action) = action {
+                                debug!("[Swipe] Pressed: {:?} -> {:?}", dir, action);
+                                state_cb.store(Some(Arc::new(dir)));
                                 match action {
                                     SwipeAction::Key(key) => {
                                         sender_cb.input(KeyMessage::ButtonPress(key.code()).into());
@@ -274,6 +282,7 @@ impl kbd::Layer {
                                     }
                                     SwipeAction::Layer(side, idx) => {
                                         sender_cb.input(KeyMessage::Layer(*side, *idx).into());
+                                        sender_cb.input(UIMessage::LayoutChanged);
                                     }
                                     SwipeAction::Arrow => {
                                         let key = match dir {
@@ -304,22 +313,28 @@ impl kbd::Layer {
 
                         let key_cb = key.clone();
                         let sender_cb = sender.clone();
-                        button.connect("swipe-released", true, move |args| {
-                            let dir: Direction = unsafe { Direction::from_value(&args[1]) };
-                            let action = match dir {
-                                Direction::Up => &key_cb.up,
-                                Direction::Right => &key_cb.right,
-                                Direction::Left => &key_cb.left,
-                                Direction::Down => &key_cb.down,
-                            };
-                            if let Some(action) = action {
-                                match action {
-                                    // Swipe-releasing is only relevant for the layer swipe action.
-                                    SwipeAction::Layer(side, idx) => {
-                                        sender_cb.input(KeyMessage::Layer(*side, *idx).into());
+                        let state_cb = state.clone();
+                        button.connect("released", true, move |_| {
+                            if let Some(dir) = state_cb.swap(None).take() {
+                                let action = match *dir {
+                                    Direction::Up => &key_cb.up,
+                                    Direction::Right => &key_cb.right,
+                                    Direction::Left => &key_cb.left,
+                                    Direction::Down => &key_cb.down,
+                                };
+                                if let Some(action) = action {
+                                    debug!("[Swipe] Released: {:?} -> {:?}", dir, action);
+                                    match action {
+                                        // Swipe-releasing is only relevant for the layer swipe action.
+                                        SwipeAction::Layer(side, _) => {
+                                            sender_cb.input(KeyMessage::Layer(*side, 0).into());
+                                            sender_cb.input(UIMessage::LayoutChanged);
+                                        }
+                                        _ => (),
                                     }
-                                    _ => (),
                                 }
+                            } else {
+                                sender_cb.input(KeyMessage::ButtonRelease(scan_code).into());
                             }
                             None
                         });
@@ -332,6 +347,9 @@ impl kbd::Layer {
             container.append(&row_container);
         }
 
+        container.set_margin_all(15);
+        container.set_align(gtk::Align::Center);
+        container.set_expand(true);
         container
     }
 }
