@@ -6,7 +6,7 @@ window {
 button {
   background-color: rgb(16, 16, 16);
   background-image: none;
-  border-radius: 0;
+  border-radius: 5px;
   border: 1px solid rgb(32, 32, 32);
   margin: 1px;
   opacity: 0.85;
@@ -26,4 +26,12 @@ button:active {
 
 button:checked {
   background-color: rgb(255, 255, 255);
+}
+
+.trigger {
+  max-width: 32px;
+  max-height: 32px;
+  border: none;
+  margin-bottom: 2px;
+  border-radius: 2px 0 0 0;
 }

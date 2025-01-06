@@ -11,7 +11,10 @@ use gtk::prelude::{ApplicationExt, BoxExt, GtkWindowExt, ToggleButtonExt, Widget
 use gtk4_layer_shell::{Edge, KeyboardMode, Layer, LayerShell};
 use relm4::{
     ComponentParts, ComponentSender, RelmWidgetExt, SimpleComponent,
-    gtk::{self, prelude::GtkApplicationExt},
+    gtk::{
+        self,
+        prelude::{ButtonExt, GtkApplicationExt},
+    },
 };
 use tracing::debug;
 
@@ -26,6 +29,8 @@ pub struct UIModel {
     /// We use two windows, one for each half of the keyboard.
     /// This lets input in the area between the two halves pass through.
     window: (gtk::Window, gtk::Window),
+
+    trigger: gtk::Window,
     keyboard: Keyboard,
     left: Vec<gtk::Box>,
     right: Vec<gtk::Box>,
@@ -33,9 +38,20 @@ pub struct UIModel {
 
 #[derive(Debug)]
 pub enum UIMessage {
+    /// Pass message to the keyboard.
     Keyboard(KeyMessage),
-    LayoutChanged,
-    AppQuit,
+
+    /// Update displayed layouts.
+    UpdateLayout,
+
+    /// Hide the keyboard.
+    HideKeyboard,
+
+    /// Show the keyboard.
+    ShowKeyboard,
+
+    /// Quit the application.
+    Quit,
 }
 impl From<KeyMessage> for UIMessage {
     fn from(value: KeyMessage) -> Self {
@@ -65,12 +81,25 @@ impl SimpleComponent for UIModel {
         window: Self::Root,
         sender: ComponentSender<Self>,
     ) -> ComponentParts<Self> {
-        // The dummy window is pushed to the back
-        // and made invisible.
+        // The main window hosts the button
+        // to show the keyboard.
+        let trigger = gtk::Button::builder()
+            .label("")
+            .width_request(8)
+            .height_request(8)
+            .css_classes(["trigger"])
+            .build();
+        let sender_cb = sender.clone();
+        trigger.connect_clicked(move |_| {
+            sender_cb.input(UIMessage::ShowKeyboard);
+        });
         window.init_layer_shell();
-        window.set_layer(Layer::Background);
+        window.set_layer(Layer::Overlay);
         window.set_keyboard_mode(KeyboardMode::None);
-        window.set_opacity(0.0);
+        window.set_anchor(Edge::Right, true);
+        window.set_anchor(Edge::Bottom, true);
+        window.set_child(Some(&trigger));
+        window.set_visible(false);
 
         // Then we initialize our actual two windows.
         let (mut left, mut right) = (
@@ -93,6 +122,7 @@ impl SimpleComponent for UIModel {
 
         let model = UIModel {
             keyboard,
+            trigger: window,
             window: (left, right),
             left: left_halves,
             right: right_halves,
@@ -106,9 +136,8 @@ impl SimpleComponent for UIModel {
         app.add_window(&model.window.1);
         model.window.0.present();
         model.window.1.present();
-
-        // Close the dummy window.
-        window.close();
+        model.window.0.set_visible(false);
+        model.window.1.set_visible(false);
 
         ComponentParts { model, widgets: () }
     }
@@ -118,10 +147,16 @@ impl SimpleComponent for UIModel {
             UIMessage::Keyboard(msg) => {
                 self.keyboard.handle(msg);
             }
-            UIMessage::LayoutChanged => {
+            UIMessage::UpdateLayout => {
                 self.render_keyboard();
             }
-            UIMessage::AppQuit => {
+            UIMessage::HideKeyboard => {
+                self.hide_keyboard();
+            }
+            UIMessage::ShowKeyboard => {
+                self.show_keyboard();
+            }
+            UIMessage::Quit => {
                 self.keyboard.destroy();
                 relm4::main_application().quit();
             }
@@ -152,6 +187,18 @@ impl UIModel {
         let (left, right) = self.keyboard.layer;
         self.window.0.set_child(Some(&self.left[left]));
         self.window.1.set_child(Some(&self.right[right]));
+    }
+
+    fn show_keyboard(&self) {
+        self.trigger.set_visible(false);
+        self.window.0.set_visible(true);
+        self.window.1.set_visible(true);
+    }
+
+    fn hide_keyboard(&self) {
+        self.trigger.set_visible(true);
+        self.window.0.set_visible(false);
+        self.window.1.set_visible(false);
     }
 }
 
@@ -333,7 +380,7 @@ fn handle_swipe_action_press(
         }
         SwipeAction::Layer(side, idx) => {
             sender.input(KeyMessage::Layer(*side, *idx).into());
-            sender.input(UIMessage::LayoutChanged);
+            sender.input(UIMessage::UpdateLayout);
         }
         SwipeAction::Arrow => {
             let key = match dir {
@@ -371,6 +418,9 @@ fn handle_swipe_action_press(
             };
             send_key(key.code(), sender);
         }
+        SwipeAction::HideKeyboard => {
+            sender.input(UIMessage::HideKeyboard);
+        }
     }
 }
 
@@ -384,7 +434,7 @@ fn handle_swipe_action_release(
         // Swipe-releasing is only relevant for the layer swipe action.
         SwipeAction::Layer(side, _) => {
             sender.input(KeyMessage::Layer(*side, 0).into());
-            sender.input(UIMessage::LayoutChanged);
+            sender.input(UIMessage::UpdateLayout);
         }
 
         // TODO the downside with this approach, which doesn't

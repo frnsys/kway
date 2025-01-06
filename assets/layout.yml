@@ -47,6 +47,7 @@ right:
         w: !Arrow
         e: !Arrow
       - key: KEY_ENTER
+        w: !HideKeyboard
   - - - key: KEY_1
       - key: KEY_2
       - key: KEY_3

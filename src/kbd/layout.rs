@@ -168,9 +168,10 @@ pub enum SwipeAction {
     /// This is only meaningful for left/right swipes.
     Select,
 
-    // TODO
-    // TODO try using shift+arrow left/right and then delete on release
-    // Delete text in the swipe direction.
-    // This is only meaningful for left/right swipes.
+    /// Delete text in the swipe direction.
+    /// This is only meaningful for left/right swipes.
     Delete,
+
+    /// Hide the keyboard.
+    HideKeyboard,
 }
