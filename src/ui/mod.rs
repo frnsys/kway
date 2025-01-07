@@ -252,18 +252,27 @@ impl kbd::KeyDef {
                 button.upcast()
             }
             KeyDef::Pointer => {
-                let glyph = "⁜";
+                let glyph = "※";
                 let button = KeyButton::default();
                 button.set_primary_content(glyph);
                 button.set_width_request(size);
                 button.set_height_request(size);
 
+                // We scale the pointer movement exponentially
+                // based on distance from the drag start, such that
+                // closer movements are finer and larger movements
+                // cover more ground.
+                let base_scale = 2.;
+                let offset_exp = 1. / 3.;
                 let sender_cb = sender.clone();
                 button.connect("freemove", true, move |args| {
-                    let dx = args[1].get::<f64>().unwrap().round() as i32;
-                    let dy = args[2].get::<f64>().unwrap().round() as i32;
+                    let dx = args[1].get::<f64>().unwrap();
+                    let dy = args[2].get::<f64>().unwrap();
+                    let ox = args[3].get::<f64>().unwrap().abs().powf(offset_exp);
+                    let oy = args[4].get::<f64>().unwrap().abs().powf(offset_exp);
+                    let dx = (dx * ox * base_scale).round() as i32;
+                    let dy = (dy * oy * base_scale).round() as i32;
                     sender_cb.input(PointerMessage::Move(dx, dy).into());
-
                     sender_cb.input(KeyMessage::MouseLayer(true).into());
                     sender_cb.input(UIMessage::UpdateLayout);
                     None
