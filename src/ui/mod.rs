@@ -1,6 +1,6 @@
 mod key;
 
-use std::sync::Arc;
+use std::{process::Command, sync::Arc};
 
 use arc_swap::ArcSwapOption;
 use gdk4::{
@@ -44,6 +44,9 @@ pub enum UIMessage {
 
     /// Pass message to the pointer.
     Pointer(PointerMessage),
+
+    /// Execute a command.
+    Command(String, Vec<String>),
 
     /// Update displayed layouts.
     UpdateLayout,
@@ -170,6 +173,12 @@ impl SimpleComponent for UIModel {
             UIMessage::Pointer(msg) => {
                 self.pointer.handle(msg).unwrap();
             }
+            UIMessage::Command(cmd, args) => {
+                Command::new(cmd)
+                    .args(args)
+                    .spawn()
+                    .expect("Command failed to start");
+            }
             UIMessage::UpdateLayout => {
                 self.render_keyboard();
             }
@@ -229,6 +238,22 @@ impl kbd::KeyDef {
     fn render(&self, size: i32, sender: &ComponentSender<UIModel>) -> gtk::Widget {
         match self {
             KeyDef::Basic(key) => key.render(size, sender),
+            KeyDef::Command { label, cmd, args } => {
+                let button = KeyButton::default();
+                button.set_primary_content(label.as_str());
+                button.set_width_request(size);
+                button.set_height_request(size);
+
+                let cmd = cmd.clone();
+                let args = args.clone();
+                let sender_cb = sender.clone();
+                button.connect("released", true, move |_| {
+                    sender_cb.input(UIMessage::Command(cmd.clone(), args.clone()));
+                    None
+                });
+
+                button.upcast()
+            }
             KeyDef::PointerButton(key) => {
                 let button = KeyButton::default();
                 button.set_primary_content(key.glyph());

@@ -63,10 +63,22 @@ impl Modifier {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(untagged)]
 pub enum KeyDef {
+    /// A basic key, with optional swipe actions.
     Basic(BasicKey),
 
+    /// Execute an arbitrary command.
+    Command {
+        cmd: String,
+
+        #[serde(default)]
+        args: Vec<String>,
+        label: String,
+    },
+
+    /// Send a mouse/pointer button.
     PointerButton(PointerButton),
 
+    /// Control the mouse/pointer.
     #[serde(deserialize_with = "pointer")]
     Pointer,
 }
