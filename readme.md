@@ -1,3 +1,5 @@
+![](assets/shot.webp)
+
 This is a heavily modified version of [ptazithos/wkeys](https://github.com/ptazithos/wkeys).
 
 Note this is designed for my own use; feel free to fork but I likely won't maintain or add features outside of my own needs.
