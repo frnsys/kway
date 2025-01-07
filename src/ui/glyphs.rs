@@ -1,7 +1,27 @@
 use evdev::Key;
 
+use crate::{layout::BasicKey, pointer::PointerButton};
+
+impl BasicKey {
+    pub fn glyph(&self) -> String {
+        self.label
+            .clone()
+            .unwrap_or_else(|| default_glyph(&self.key).to_string())
+    }
+}
+
+impl PointerButton {
+    pub fn glyph(&self) -> &'static str {
+        match self {
+            Self::Left => "′",
+            Self::Middle => "″",
+            Self::Right => "‴",
+        }
+    }
+}
+
 /// Get a default glyph/character for a key.
-pub fn default_glyph(key: &Key) -> &'static str {
+fn default_glyph(key: &Key) -> &'static str {
     match *key {
         Key::KEY_ESC => "⎋",
         Key::KEY_1 => "1",

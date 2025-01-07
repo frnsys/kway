@@ -1,8 +1,6 @@
 use serde::{Deserialize, Deserializer};
 
-use crate::ptr::PointerButton;
-
-use super::glyphs::default_glyph;
+use crate::pointer::PointerButton;
 
 /// A `Layout` has two [`Side`]s,
 /// each of which consists of one or more [`Layer`]s.
@@ -20,10 +18,10 @@ pub enum Side {
 
 impl Default for Layout {
     fn default() -> Self {
-        let default = include_str!("../../assets/layout.yml");
+        let default = include_str!("../assets/layout.yml");
         let mut layout: Layout = serde_yaml::from_str(default).expect("Default layout is valid");
 
-        let mouse_layer = include_str!("../../assets/mouse-layer.yml");
+        let mouse_layer = include_str!("../assets/mouse-layer.yml");
         let mouse_layer: Layer = serde_yaml::from_str(mouse_layer).expect("Mouse layer is valid");
         layout.left.push(mouse_layer);
 
@@ -83,16 +81,6 @@ pub enum KeyDef {
     Pointer,
 }
 
-impl PointerButton {
-    pub fn glyph(&self) -> &'static str {
-        match self {
-            Self::Left => "′",
-            Self::Middle => "″",
-            Self::Right => "‴",
-        }
-    }
-}
-
 // Hack to deserialize an untagged unit variant by name.
 // <https://github.com/serde-rs/serde/issues/1158#issuecomment-365362959>
 fn pointer<'de, D>(deserializer: D) -> Result<(), D::Error>
@@ -131,7 +119,7 @@ pub struct BasicKey {
     width: Option<u8>,
 
     #[serde(default)]
-    label: Option<String>,
+    pub label: Option<String>,
 }
 impl Default for BasicKey {
     fn default() -> Self {
@@ -148,12 +136,6 @@ impl Default for BasicKey {
     }
 }
 impl BasicKey {
-    pub fn glyph(&self) -> String {
-        self.label
-            .clone()
-            .unwrap_or_else(|| default_glyph(&self.key).to_string())
-    }
-
     pub fn width(&self) -> f32 {
         self.width.unwrap_or(1) as f32
     }

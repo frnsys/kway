@@ -1,0 +1,341 @@
+use std::sync::Arc;
+
+use arc_swap::ArcSwapOption;
+use gdk4::{
+    glib::value::FromValue,
+    prelude::{Cast, ObjectExt},
+};
+use relm4::{
+    ComponentSender, RelmWidgetExt,
+    gtk::{
+        self,
+        prelude::{BoxExt, ToggleButtonExt, WidgetExt},
+    },
+};
+use tracing::debug;
+
+use crate::{
+    keyboard::{KeyMessage, KeyType},
+    layout::{BasicKey, KeyDef, Layer, Modifier, SwipeAction},
+    pointer::PointerMessage,
+};
+
+use super::{UIMessage, UIModel, key::KeyButton, swipe::Direction};
+
+impl KeyDef {
+    fn render(&self, size: i32, sender: &ComponentSender<UIModel>) -> gtk::Widget {
+        match self {
+            KeyDef::Basic(key) => key.render(size, sender),
+            KeyDef::Command { label, cmd, args } => {
+                let button = KeyButton::default();
+                button.set_primary_content(label.as_str());
+                button.set_width_request(size);
+                button.set_height_request(size);
+
+                let cmd = cmd.clone();
+                let args = args.clone();
+                let sender_cb = sender.clone();
+                button.connect("released", true, move |_| {
+                    sender_cb.input(UIMessage::Command(cmd.clone(), args.clone()));
+                    None
+                });
+
+                button.upcast()
+            }
+            KeyDef::PointerButton(key) => {
+                let button = KeyButton::default();
+                button.set_primary_content(key.glyph());
+                button.set_width_request(size);
+                button.set_height_request(size);
+
+                let key = key.clone();
+                let sender_cb = sender.clone();
+                button.connect("tap-pressed", true, move |_| {
+                    sender_cb.input(PointerMessage::Press(key).into());
+                    None
+                });
+
+                let key = key.clone();
+                let sender_cb = sender.clone();
+                button.connect("released", true, move |_| {
+                    sender_cb.input(PointerMessage::Release(key).into());
+                    None
+                });
+
+                button.upcast()
+            }
+            KeyDef::Pointer => {
+                let glyph = "※";
+                let button = KeyButton::default();
+                button.set_primary_content(glyph);
+                button.set_width_request(size);
+                button.set_height_request(size);
+
+                // We scale the pointer movement exponentially
+                // based on distance from the drag start, such that
+                // closer movements are finer and larger movements
+                // cover more ground.
+                let base_scale = 2.;
+                let offset_exp = 1. / 3.;
+                let sender_cb = sender.clone();
+                button.connect("freemove", true, move |args| {
+                    let dx = args[1].get::<f64>().unwrap();
+                    let dy = args[2].get::<f64>().unwrap();
+                    let ox = args[3].get::<f64>().unwrap().abs().powf(offset_exp);
+                    let oy = args[4].get::<f64>().unwrap().abs().powf(offset_exp);
+                    let dx = (dx * ox * base_scale).round() as i32;
+                    let dy = (dy * oy * base_scale).round() as i32;
+                    sender_cb.input(PointerMessage::Move(dx, dy).into());
+                    sender_cb.input(KeyMessage::MouseLayer(true).into());
+                    sender_cb.input(UIMessage::UpdateLayout);
+                    None
+                });
+
+                let sender_cb = sender.clone();
+                button.connect("released", true, move |_| {
+                    sender_cb.input(KeyMessage::MouseLayer(false).into());
+                    sender_cb.input(UIMessage::UpdateLayout);
+                    None
+                });
+
+                button.upcast()
+            }
+        }
+    }
+}
+
+impl BasicKey {
+    fn render(&self, size: i32, sender: &ComponentSender<UIModel>) -> gtk::Widget {
+        let key = self.clone();
+        let glyph = key.glyph();
+        let scan_code = key.key.code();
+        let width = (key.width() * f32::from(size as u16)).round() as i32;
+
+        match KeyType::from(key.key) {
+            KeyType::Mod => {
+                let toggle = gtk::ToggleButton::builder()
+                    .label(glyph)
+                    .width_request(width)
+                    .height_request(size)
+                    .build();
+
+                let button_sender = sender.clone();
+                toggle.connect_toggled(move |btn| {
+                    if btn.is_active() {
+                        button_sender.input(KeyMessage::ModPress(scan_code).into());
+                    } else {
+                        button_sender.input(KeyMessage::ModRelease(scan_code).into());
+                    }
+                });
+
+                toggle.upcast()
+            }
+            KeyType::Lock => {
+                let toggle = gtk::ToggleButton::builder()
+                    .label(glyph)
+                    .width_request(width)
+                    .height_request(size)
+                    .build();
+
+                let button_sender = sender.clone();
+                toggle.connect_toggled(move |btn| {
+                    if btn.is_active() {
+                        button_sender.input(KeyMessage::LockPress(scan_code).into());
+                    } else {
+                        button_sender.input(KeyMessage::LockRelease(scan_code).into());
+                    }
+                });
+
+                toggle.upcast()
+            }
+            KeyType::Normal => {
+                let button = KeyButton::default();
+                button.set_primary_content(glyph);
+                button.set_width_request(width);
+                button.set_height_request(size);
+
+                let sender_cb = sender.clone();
+                let modifiers = key.modifiers.clone();
+                button.connect("tap-pressed", true, move |_| {
+                    for modifier in &modifiers {
+                        sender_cb.input(KeyMessage::ModPress(modifier.code()).into());
+                    }
+                    sender_cb.input(KeyMessage::ButtonPress(scan_code).into());
+                    None
+                });
+
+                let state = Arc::new(ArcSwapOption::from(None));
+
+                let key_cb = key.clone();
+                let sender_cb = sender.clone();
+                let state_cb = state.clone();
+                button.connect("swipe-pressed", true, move |args| {
+                    let dir: Direction = unsafe { Direction::from_value(&args[1]) };
+                    let action = match dir {
+                        Direction::Up => &key_cb.up,
+                        Direction::Right => &key_cb.right,
+                        Direction::Left => &key_cb.left,
+                        Direction::Down => &key_cb.down,
+                    };
+                    if let Some(action) = action {
+                        debug!("[Swipe] Pressed: {:?} -> {:?}", dir, action);
+                        state_cb.store(Some(Arc::new(dir)));
+                        handle_swipe_action_press(&key_cb, action, dir, &sender_cb);
+                    }
+                    None
+                });
+
+                let key_cb = key.clone();
+                let sender_cb = sender.clone();
+                let state_cb = state.clone();
+                let modifiers = key.modifiers.clone();
+                button.connect("released", true, move |_| {
+                    if let Some(dir) = state_cb.swap(None).take() {
+                        let action = match *dir {
+                            Direction::Up => &key_cb.up,
+                            Direction::Right => &key_cb.right,
+                            Direction::Left => &key_cb.left,
+                            Direction::Down => &key_cb.down,
+                        };
+                        if let Some(action) = action {
+                            debug!("[Swipe] Released: {:?} -> {:?}", dir, action);
+                            handle_swipe_action_release(&key_cb, action, *dir, &sender_cb);
+                        }
+                    } else {
+                        sender_cb.input(KeyMessage::ButtonRelease(scan_code).into());
+                        for modifier in &modifiers {
+                            sender_cb.input(KeyMessage::ModRelease(modifier.code()).into());
+                        }
+                    }
+                    None
+                });
+
+                button.upcast()
+            }
+        }
+    }
+}
+
+impl Layer {
+    pub fn render(&self, sender: ComponentSender<UIModel>) -> gtk::Box {
+        let key_size = 48;
+
+        let container = gtk::Box::builder()
+            .orientation(gtk::Orientation::Vertical)
+            .build();
+
+        for row in self.rows() {
+            let row_container = gtk::Box::builder()
+                .orientation(gtk::Orientation::Horizontal)
+                .build();
+
+            row.iter().for_each(|key| {
+                let button = key.render(key_size, &sender);
+                row_container.append(&button);
+            });
+
+            container.append(&row_container);
+        }
+
+        // Swiping/dragging leads to weird velocity/offset values
+        // if the swipe/drag ends outside of the gtk window.
+        // Having some margin helps protect against this.
+        container.set_margin_all(32);
+        container.set_align(gtk::Align::Center);
+        container.set_expand(true);
+        container
+    }
+}
+
+fn send_key(key: u16, sender: &ComponentSender<UIModel>) {
+    sender.input(KeyMessage::ButtonPress(key).into());
+    sender.input(KeyMessage::ButtonRelease(key).into());
+}
+
+fn send_mod_key(modifier: u16, key: u16, sender: &ComponentSender<UIModel>) {
+    sender.input(KeyMessage::ModPress(modifier).into());
+    sender.input(KeyMessage::ButtonPress(key).into());
+    sender.input(KeyMessage::ButtonRelease(key).into());
+    sender.input(KeyMessage::ModRelease(modifier).into());
+}
+
+fn handle_swipe_action_press(
+    key_def: &BasicKey,
+    action: &SwipeAction,
+    dir: Direction,
+    sender: &ComponentSender<UIModel>,
+) {
+    let scan_code = key_def.key.code();
+
+    match action {
+        SwipeAction::Key(key) => {
+            send_key(key.code(), sender);
+        }
+        SwipeAction::Modified(modifier) => {
+            send_mod_key(modifier.code(), scan_code, sender);
+        }
+        SwipeAction::Layer(side, idx) => {
+            sender.input(KeyMessage::Layer(*side, *idx).into());
+            sender.input(UIMessage::UpdateLayout);
+        }
+        SwipeAction::Arrow => {
+            let key: evdev::Key = dir.into();
+            send_key(key.code(), sender);
+        }
+        SwipeAction::Select => {
+            let key: evdev::Key = dir.into();
+            send_mod_key(Modifier::Shift.code(), key.code(), sender);
+        }
+        SwipeAction::Delete => {
+            let key: evdev::Key = dir.into();
+            send_mod_key(Modifier::Shift.code(), key.code(), sender);
+        }
+        SwipeAction::Scroll => {
+            let msg = match dir {
+                Direction::Up => PointerMessage::ScrollUp,
+                Direction::Right => PointerMessage::ScrollRight,
+                Direction::Left => PointerMessage::ScrollLeft,
+                Direction::Down => PointerMessage::ScrollDown,
+            };
+            sender.input(msg.into());
+        }
+        SwipeAction::HideKeyboard => {
+            sender.input(UIMessage::HideKeyboard);
+        }
+    }
+}
+
+fn handle_swipe_action_release(
+    _key_def: &BasicKey,
+    action: &SwipeAction,
+    _dir: Direction,
+    sender: &ComponentSender<UIModel>,
+) {
+    match action {
+        // Swipe-releasing is only relevant for the layer swipe action.
+        SwipeAction::Layer(side, _) => {
+            sender.input(KeyMessage::Layer(*side, 0).into());
+            sender.input(UIMessage::UpdateLayout);
+        }
+
+        // TODO the downside with this approach, which doesn't
+        // require any specific input field API, is that it will
+        // still delete one character on an empty selection;
+        // i.e. normal backspace behavior.
+        SwipeAction::Delete => {
+            send_key(evdev::Key::KEY_BACKSPACE.code(), sender);
+        }
+        _ => (),
+    }
+}
+
+impl From<Direction> for evdev::Key {
+    fn from(dir: Direction) -> Self {
+        match dir {
+            Direction::Up => evdev::Key::KEY_UP,
+            Direction::Right => evdev::Key::KEY_RIGHT,
+            Direction::Left => evdev::Key::KEY_LEFT,
+            Direction::Down => evdev::Key::KEY_DOWN,
+        }
+    }
+}

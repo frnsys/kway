@@ -1,8 +1,8 @@
 use relm4::RelmApp;
 
 use crate::{
-    kbd::Keyboard,
-    ptr::Pointer,
+    keyboard::Keyboard,
+    pointer::Pointer,
     ui::{UIMessage, UIModel},
 };
 

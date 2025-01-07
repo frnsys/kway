@@ -1,13 +1,10 @@
-mod glyphs;
-mod keymap;
-mod layout;
-mod session;
-
-use layout::Side;
-pub use layout::{BasicKey, KeyDef, Layer, Layout, Modifier, SwipeAction};
-use session::SessionState;
 use tracing::debug;
 use wayland_client::{Connection, EventQueue, protocol::wl_keyboard::KeyState};
+
+use crate::{
+    layout::{Layer, Layout, Side},
+    session::SessionState,
+};
 
 pub enum KeyType {
     Mod,

@@ -1,7 +1,9 @@
 mod app;
 mod autocorrect;
-mod kbd;
-mod ptr;
+mod keyboard;
+mod layout;
+mod pointer;
+mod session;
 mod ui;
 
 use app::App;
