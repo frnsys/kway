@@ -51,7 +51,7 @@ pub struct Keyboard {
     locks: u32,
 }
 impl Keyboard {
-    pub fn new() -> Self {
+    pub fn new(layout: Layout) -> Self {
         let conn = Connection::connect_to_env().unwrap();
         let display = conn.display();
 
@@ -73,7 +73,7 @@ impl Keyboard {
             modifiers: 0,
             locks: 0,
 
-            layout: Layout::default(),
+            layout,
             layer: (0, 0),
         }
     }

@@ -6,7 +6,9 @@ edition = "2024"
 [dependencies]
 anyhow = "1.0.95"
 arc-swap = "1.7.1"
+bpaf = { version = "0.9.15", features = ["derive"] }
 evdev = { version = "0.12.2", features = ["serde"] }
+fs-err = "3.0.0"
 gdk4 = "0.9.5"
 gtk4-layer-shell = "0.4.0"
 mouse-keyboard-input = "0.9.1"

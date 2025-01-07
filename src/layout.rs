@@ -1,3 +1,5 @@
+use std::path::Path;
+
 use serde::{Deserialize, Deserializer};
 
 use crate::pointer::PointerButton;
@@ -10,22 +12,24 @@ pub struct Layout {
     pub right: Vec<Layer>,
 }
 
-#[derive(Debug, Clone, Copy, Deserialize)]
-pub enum Side {
-    Left,
-    Right,
-}
+impl Layout {
+    pub fn from_path<P: AsRef<Path>>(path: P) -> Self {
+        let layout: String = fs_err::read_to_string(path).expect("Layout file not found");
+        Self::from_str(&layout)
+    }
 
+    fn from_str(s: &str) -> Self {
+        let mut layout: Layout = serde_yaml::from_str(s).expect("Layout is invalid");
+        let mouse_layer = include_str!("../assets/mouse-layer.yml");
+        let mouse_layer: Layer = serde_yaml::from_str(mouse_layer).expect("Mouse layer is invalid");
+        layout.left.push(mouse_layer);
+        layout
+    }
+}
 impl Default for Layout {
     fn default() -> Self {
         let default = include_str!("../assets/layout.yml");
-        let mut layout: Layout = serde_yaml::from_str(default).expect("Default layout is valid");
-
-        let mouse_layer = include_str!("../assets/mouse-layer.yml");
-        let mouse_layer: Layer = serde_yaml::from_str(mouse_layer).expect("Mouse layer is valid");
-        layout.left.push(mouse_layer);
-
-        layout
+        Self::from_str(default)
     }
 }
 
@@ -38,6 +42,12 @@ impl Layer {
     pub fn rows(&self) -> impl Iterator<Item = &Vec<KeyDef>> {
         self.layout.iter()
     }
+}
+
+#[derive(Debug, Clone, Copy, Deserialize)]
+pub enum Side {
+    Left,
+    Right,
 }
 
 #[derive(Debug, Clone, Deserialize)]
