@@ -34,6 +34,7 @@ sudo reboot
 
 - Written for Wayland
 - Virtual split, multi-layer keyboard
+- Show/hide the keyboard
 - Multiple gestures per key:
   - Tap
   - Hold-repeat
@@ -152,7 +153,13 @@ left:
         label: "!"
 ```
 
+## Known Issues
+
+When a drag/swipe gesture leaves the keyboard's window GTK reports discontinuous offset values. For example, if you're dragging towards the edge of the keyboard window you may see an x-offset of `-100` and then once you leave the window the x-offset suddenly jumps to `600`. I'm not sure if this is a bug or if this is part of how Wayland handles pointers. In any case this means that swipe/drag gestures will be sensible only within the bounds of the keyboard windows.
+
+
 ## Roadmap
 
 - [ ] Autocorrect
 - [ ] Auto-rotation
+
