@@ -171,7 +171,7 @@ impl ObjectImpl for ButtonInner {
                         state.set(KeyState::Swiping { x, y });
                         if let Some(dir) = dir {
                             debug!("[Swipe] direction={:?}", dir);
-                            obj_cb.emit_by_name::<()>("swipe-pressed", &[&dir.to_value()]);
+                            obj_cb.emit_by_name::<()>("swipe-repeated", &[&dir.to_value()]);
                         }
                     }
                 }
@@ -201,6 +201,9 @@ impl ObjectImpl for ButtonInner {
         SIGNALS.get_or_init(|| {
             vec![
                 Signal::builder("swipe-pressed")
+                    .param_types([Type::U8])
+                    .build(),
+                Signal::builder("swipe-repeated")
                     .param_types([Type::U8])
                     .build(),
                 Signal::builder("tap-pressed").build(),

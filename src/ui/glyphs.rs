@@ -13,9 +13,9 @@ impl BasicKey {
 impl PointerButton {
     pub fn glyph(&self) -> &'static str {
         match self {
-            Self::Left => "′",
-            Self::Middle => "″",
-            Self::Right => "‴",
+            Self::Left => "L",
+            Self::Middle => "M",
+            Self::Right => "R",
         }
     }
 }
@@ -138,7 +138,7 @@ fn default_glyph(key: &Key) -> &'static str {
         Key::KEY_VOLUMEDOWN => "?",
         Key::KEY_VOLUMEUP => "?",
         Key::KEY_POWER => "?", /* SC System Power Down */
-        Key::KEY_KPEQUAL => "?",
+        Key::KEY_KPEQUAL => "=",
         Key::KEY_KPPLUSMINUS => "?",
         Key::KEY_PAUSE => "?",
         Key::KEY_SCALE => "?", /* AL Compiz Scale (Expose) */

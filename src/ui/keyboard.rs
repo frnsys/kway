@@ -16,17 +16,28 @@ use tracing::debug;
 
 use crate::{
     keyboard::{KeyMessage, KeyType},
-    layout::{BasicKey, KeyDef, Layer, Modifier, SwipeAction},
+    layout::{BasicKey, Command, KeyDef, Layer, Modifier, SwipeAction},
     pointer::PointerMessage,
 };
 
 use super::{UIMessage, UIModel, key::KeyButton, swipe::Direction};
 
+impl BasicKey {
+    fn dir_action(&self, dir: Direction) -> &Option<SwipeAction> {
+        match dir {
+            Direction::Up => &self.up,
+            Direction::Right => &self.right,
+            Direction::Left => &self.left,
+            Direction::Down => &self.down,
+        }
+    }
+}
+
 impl KeyDef {
     fn render(&self, size: i32, sender: &ComponentSender<UIModel>) -> gtk::Widget {
         match self {
             KeyDef::Basic(key) => key.render(size, sender),
-            KeyDef::Command { label, cmd, args } => {
+            KeyDef::Command(Command { label, cmd, args }) => {
                 let button = KeyButton::default();
                 button.set_primary_content(label.as_str());
                 button.set_width_request(size);
@@ -65,7 +76,7 @@ impl KeyDef {
                 button.upcast()
             }
             KeyDef::Pointer => {
-                let glyph = "※";
+                let glyph = "✱";
                 let button = KeyButton::default();
                 button.set_primary_content(glyph);
                 button.set_width_request(size);
@@ -171,12 +182,7 @@ impl BasicKey {
                 let state_cb = state.clone();
                 button.connect("swipe-pressed", true, move |args| {
                     let dir: Direction = unsafe { Direction::from_value(&args[1]) };
-                    let action = match dir {
-                        Direction::Up => &key_cb.up,
-                        Direction::Right => &key_cb.right,
-                        Direction::Left => &key_cb.left,
-                        Direction::Down => &key_cb.down,
-                    };
+                    let action = key_cb.dir_action(dir);
                     if let Some(action) = action {
                         debug!("[Swipe] Pressed: {:?} -> {:?}", dir, action);
                         state_cb.store(Some(Arc::new(dir)));
@@ -187,16 +193,23 @@ impl BasicKey {
 
                 let key_cb = key.clone();
                 let sender_cb = sender.clone();
+                button.connect("swipe-repeated", true, move |args| {
+                    let dir: Direction = unsafe { Direction::from_value(&args[1]) };
+                    let action = key_cb.dir_action(dir);
+                    if let Some(action) = action {
+                        debug!("[Swipe] Repeated: {:?} -> {:?}", dir, action);
+                        handle_swipe_action_repeat(&key_cb, action, dir, &sender_cb);
+                    }
+                    None
+                });
+
+                let key_cb = key.clone();
+                let sender_cb = sender.clone();
                 let state_cb = state.clone();
                 let modifiers = key.modifiers.clone();
                 button.connect("released", true, move |_| {
                     if let Some(dir) = state_cb.swap(None).take() {
-                        let action = match *dir {
-                            Direction::Up => &key_cb.up,
-                            Direction::Right => &key_cb.right,
-                            Direction::Left => &key_cb.left,
-                            Direction::Down => &key_cb.down,
-                        };
+                        let action = key_cb.dir_action(*dir);
                         if let Some(action) = action {
                             debug!("[Swipe] Released: {:?} -> {:?}", dir, action);
                             handle_swipe_action_release(&key_cb, action, *dir, &sender_cb);
@@ -299,9 +312,26 @@ fn handle_swipe_action_press(
             };
             sender.input(msg.into());
         }
+        SwipeAction::Command(Command { cmd, args, .. }) => {
+            sender.input(UIMessage::Command(cmd.clone(), args.clone()));
+        }
         SwipeAction::HideKeyboard => {
             sender.input(UIMessage::HideKeyboard);
         }
+    }
+}
+
+fn handle_swipe_action_repeat(
+    key_def: &BasicKey,
+    action: &SwipeAction,
+    dir: Direction,
+    sender: &ComponentSender<UIModel>,
+) {
+    match action {
+        SwipeAction::Scroll | SwipeAction::Delete | SwipeAction::Select | SwipeAction::Arrow => {
+            handle_swipe_action_press(key_def, action, dir, sender)
+        }
+        _ => {}
     }
 }
 

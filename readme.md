@@ -104,7 +104,7 @@ left:
         width: 2
 
         # Modifiers to be sent with the key.
-        modifiers: [Alt, Ctrl, Shift, Meta]
+        mods: [Alt, Ctrl, Shift, Meta]
 
         # Provide a custom label instead of the default.
         label: "W"
@@ -160,6 +160,7 @@ When a drag/swipe gesture leaves the keyboard's window GTK reports discontinuous
 
 ## Roadmap
 
+- [ ] Magic keys: basically if you have n magic keys, you have a FIFO buffer of length n, and you define mappings from keys to their magic next key. E.g. pressing `[` would queue up `]`, but if you press `[(` then the `)` would displace the `]`. However if you have two magic keys, they would both be present until a third key is triggered.
 - [ ] Autocorrect
 - [ ] Auto-rotation
 

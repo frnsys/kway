@@ -1,4 +1,5 @@
 use std::{ffi::CString, fs::File, io::Write, os::fd::AsFd, path::PathBuf};
+use tracing::debug;
 use wayland_client::{
     Connection, Dispatch, Proxy, QueueHandle, WEnum,
     protocol::{
@@ -125,10 +126,10 @@ impl Dispatch<ZwpInputMethodV2, ()> for SessionState {
         _: &Connection,
         _: &QueueHandle<SessionState>,
     ) {
-        println!("RECEIVED INPUT EVENT: {:?}", event);
+        debug!("[Input]: {:?}", event);
         match event {
             zwp_input_method_v2::Event::Activate => {
-                println!("ACTIVATE");
+                debug!("[Input]: Activated");
                 state.input_serial = 0;
             }
             zwp_input_method_v2::Event::Done => {

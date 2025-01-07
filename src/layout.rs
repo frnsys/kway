@@ -69,19 +69,22 @@ impl Modifier {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+pub struct Command {
+    pub cmd: String,
+
+    #[serde(default)]
+    pub args: Vec<String>,
+    pub label: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
 #[serde(untagged)]
 pub enum KeyDef {
     /// A basic key, with optional swipe actions.
     Basic(BasicKey),
 
     /// Execute an arbitrary command.
-    Command {
-        cmd: String,
-
-        #[serde(default)]
-        args: Vec<String>,
-        label: String,
-    },
+    Command(Command),
 
     /// Send a mouse/pointer button.
     PointerButton(PointerButton),
@@ -196,6 +199,9 @@ pub enum SwipeAction {
     /// Delete text in the swipe direction.
     /// This is only meaningful for left/right swipes.
     Delete,
+
+    /// Run a system command.
+    Command(Command),
 
     /// Hide the keyboard.
     HideKeyboard,

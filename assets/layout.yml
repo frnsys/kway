@@ -1,47 +1,237 @@
 left:
   - - - key: KEY_Q
+        n:
+          Modified: Shift
       - key: KEY_W
+        n:
+          Modified: Shift
       - key: KEY_E
+        n:
+          Modified: Shift
       - key: KEY_R
+        n:
+          Modified: Shift
       - key: KEY_T
+        n:
+          Modified: Shift
     - - key: KEY_A
+        n:
+          Modified: Shift
       - key: KEY_S
+        n:
+          Modified: Shift
       - key: KEY_D
+        n:
+          Modified: Shift
       - key: KEY_F
+        n:
+          Modified: Shift
       - key: KEY_G
+        n:
+          Modified: Shift
     - - key: KEY_Z
+        n:
+          Modified: Shift
       - key: KEY_X
+        n:
+          Modified: Shift
       - key: KEY_C
+        n:
+          Modified: Shift
       - key: KEY_V
+        n:
+          Modified: Shift
       - key: KEY_B
-    - - key: KEY_ENTER
-      - key: KEY_SPACE
+        n:
+          Modified: Shift
+    - - key: KEY_MINUS
+        mods: [Shift]
+        label: "_"
+      - key: KEY_MINUS
+      - key: KEY_APOSTROPHE
+        n:
+          Key: KEY_GRAVE
+      - key: KEY_APOSTROPHE
+        mods: [Shift]
+        label: "\""
         n:
           Layer: [Right, 1]
-        width: 3
-      - key: KEY_BACKSPACE
+      - key: KEY_1
+        mods: [Shift]
+        label: "!"
+        n:
+          Key: KEY_QUESTION
+  - - - key: KEY_3
+        mods: [Shift]
+        label: "#"
+      - key: KEY_5
+        mods: [Shift]
+        label: "%"
+      - key: KEY_4
+        mods: [Shift]
+        label: "$"
+      - key: KEY_2
+        mods: [Shift]
+        label: "@"
+      - key: KEY_6
+        mods: [Shift]
+        label: "^"
+    - - key: KEY_1
+      - key: KEY_2
+      - key: KEY_3
+      - key: KEY_4
+      - key: KEY_5
+    - - key: KEY_6
+      - key: KEY_7
+      - key: KEY_8
+      - key: KEY_9
+      - key: KEY_0
+    - - key: KEY_KPDOT
+      - key: KEY_KPMINUS
+      - key: KEY_KPPLUS
+      - key: KEY_KPEQUAL
+      - key: KEY_KPASTERISK
+  - - - key: KEY_LEFTBRACE
+      - key: KEY_RIGHTBRACE
+    - - key: KEY_COMMA
+        mods: [Shift]
+        label: "<"
+      - key: KEY_DOT
+        mods: [Shift]
+        label: ">"
+    - - key: KEY_9
+        mods: [Shift]
+        label: "("
+      - key: KEY_0
+        mods: [Shift]
+        label: ")"
+  - - - key: KEY_C # Terminal copy
+        mods: [Alt, Shift]
+        label: "c"
+      - key: KEY_LEFTBRACE
+        mods: [Alt]
+        label: "<"
+      - key: KEY_RIGHTBRACE
+        mods: [Alt]
+        label: ">"
+      - key: KEY_T # New tab
+        mods: [Alt]
+        label: "t"
+    - - key: KEY_MINUS # Horizontal split
+        mods: [Alt]
+        label: "-"
+      - key: KEY_BACKSLASH # Vertical split
+        mods: [Alt]
+        label: "|"
+      - key: KEY_W # Focus pane
+        mods: [Alt]
+        label: "✛"
+      - key: KEY_M # Maximize pane
+        mods: [Alt]
+        label: "◱"
+    - - key: KEY_P # Terminal paste
+        mods: [Alt, Shift]
+        label: "p"
+      - key: KEY_E # Scroll back history
+        mods: [Alt]
+        label: "h"
+      - key: KEY_R # Resize pane
+        mods: [Alt, Shift]
+        label: "r"
+      - key: KEY_APOSTROPHE # Search
+        mods: [Alt]
+        label: "⌕"
+  - - - cmd: bemenu-run
+        args: ["-l", "10", "-p", ">"]
+        label: a
+      - cmd: /tmp/ws_ctrl
+        args: [prev]
+        label: "❮"
+      - cmd: /tmp/ws_ctrl
+        args: [next]
+        label: "❯"
+      - cmd: riverctl
+        args: ["send-layout-cmd", "filtile", "monocle"]
+        label: f
+    - - key: KEY_VOLUMEUP
+        label: "▴"
+      - cmd: mpc
+        args: [toggle]
+        label: "▸"
+      - cmd: kitty
+        args: ["--title", "ncmpcpp", "-e", "ncmpcpp"]
+        label: m
+      - cmd: kitty
+        args: ["--title", "bluetuith", "-e", "bluetuith"]
+        label: b
+    - - key: KEY_VOLUMEDOWN
+        label: "▾"
+      - key: KEY_MUTE
+        label: "◌"
+      - cmd: kitty
+        args: ["--title", "kpass", "-e", "kpass", "~/docs/pass.kdbx"]
+        label: p
+      - cmd: kitty
+        args: ["--title", "todo", "--working-directory", "~/notes", "-e", "nvim", "todo.md"]
+        label: t
 right:
   - - - key: KEY_Y
         n:
           Modified: Shift
       - key: KEY_U
+        n:
+          Modified: Shift
       - key: KEY_I
+        n:
+          Modified: Shift
+        s:
+          Command:
+            cmd: info
+            label: "i"
       - key: KEY_O
+        n:
+          Modified: Shift
       - key: KEY_P
+        n:
+          Modified: Shift
     - - key: KEY_H
+        n:
+          Modified: Shift
         w: Select
         e: Select
       - key: KEY_J
+        n:
+          Modified: Shift
       - key: KEY_K
+        n:
+          Modified: Shift
       - key: KEY_L
         n:
           Modified: Shift
       - key: KEY_SEMICOLON
+        mods: [Shift]
+        label: ":"
+        n:
+          Key: KEY_SEMICOLON
     - - key: KEY_N
+        n:
+          Modified: Shift
       - key: KEY_M
+        n:
+          Modified: Shift
       - key: KEY_COMMA
+        n:
+          Layer: [Left, 1]
+        s:
+          Layer: [Left, 2]
+        e:
+          Layer: [Left, 3]
+        w:
+          Layer: [Left, 4]
       - key: KEY_DOT
       - key: KEY_SLASH
+        n:
+          Key: KEY_BACKSLASH
     - - key: KEY_BACKSPACE
         w: Delete
         e: Delete
@@ -56,18 +246,3 @@ right:
         w: HideKeyboard
         n: Scroll
         s: Scroll
-  - - - key: KEY_1
-      - key: KEY_2
-      - key: KEY_3
-      - key: KEY_4
-      - key: KEY_5
-    - - key: KEY_6
-      - key: KEY_7
-      - key: KEY_8
-      - key: KEY_9
-      - key: KEY_0
-    - - key: KEY_X
-      - key: KEY_X
-      - key: KEY_X
-      - key: KEY_X
-      - key: KEY_X
