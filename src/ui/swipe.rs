@@ -2,14 +2,13 @@ use gdk4::glib::{
     Value,
     value::{FromValue, GenericValueTypeChecker},
 };
-use tracing::debug;
 
 /// Minimum distance to trigger a swipe.
-const SWIPE_MIN_DISTANCE: f64 = 5.;
+const SWIPE_MIN_DISTANCE: f64 = 2.;
 
 /// Swipe angle must be w/in this number of degrees
 /// to trigger a directional swipe.
-const SWIPE_ANGLE_TOLERANCE: f64 = 15.;
+const SWIPE_ANGLE_TOLERANCE: f64 = 25.;
 
 /// Minimum a swipe must increment to trigger repeat presses.
 const SWIPE_MIN_INCREMENT: f64 = 5.;
@@ -73,7 +72,6 @@ unsafe impl FromValue<'_> for Direction {
 fn direction(x: f64, y: f64) -> Option<Direction> {
     let rad = y.atan2(x);
     let deg = rad * (180.0 / std::f64::consts::PI);
-    debug!("[Swipe] angle={:?}", deg);
     if (-90. - deg).abs() <= SWIPE_ANGLE_TOLERANCE {
         Some(Direction::Up)
     } else if deg.abs() <= SWIPE_ANGLE_TOLERANCE {

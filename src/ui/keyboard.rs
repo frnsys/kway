@@ -178,8 +178,8 @@ impl BasicKey {
                 let state = Arc::new(ArcSwapOption::from(None));
 
                 let key_cb = key.clone();
-                let sender_cb = sender.clone();
                 let state_cb = state.clone();
+                let sender_cb = sender.clone();
                 button.connect("swipe-pressed", true, move |args| {
                     let dir: Direction = unsafe { Direction::from_value(&args[1]) };
                     let action = key_cb.dir_action(dir);
@@ -192,12 +192,14 @@ impl BasicKey {
                 });
 
                 let key_cb = key.clone();
+                let state_cb = state.clone();
                 let sender_cb = sender.clone();
                 button.connect("swipe-repeated", true, move |args| {
                     let dir: Direction = unsafe { Direction::from_value(&args[1]) };
                     let action = key_cb.dir_action(dir);
                     if let Some(action) = action {
                         debug!("[Swipe] Repeated: {:?} -> {:?}", dir, action);
+                        state_cb.store(Some(Arc::new(dir)));
                         handle_swipe_action_repeat(&key_cb, action, dir, &sender_cb);
                     }
                     None
@@ -316,7 +318,10 @@ fn handle_swipe_action_press(
             sender.input(UIMessage::Command(cmd.clone(), args.clone()));
         }
         SwipeAction::HideKeyboard => {
-            sender.input(UIMessage::HideKeyboard);
+            // Trigger this on release,
+            // otherwise the keyboard is hidden
+            // before release is triggered, which
+            // can cause state issues.
         }
     }
 }
@@ -354,6 +359,10 @@ fn handle_swipe_action_release(
         // i.e. normal backspace behavior.
         SwipeAction::Delete => {
             send_key(evdev::Key::KEY_BACKSPACE.code(), sender);
+        }
+
+        SwipeAction::HideKeyboard => {
+            sender.input(UIMessage::HideKeyboard);
         }
         _ => (),
     }

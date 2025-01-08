@@ -161,7 +161,6 @@ impl ObjectImpl for ButtonInner {
                     debug!("[Swipe] offset={:?},{:?}", x, y);
 
                     if let Some(dir) = dir {
-                        debug!("[Swipe] direction={:?}", dir);
                         obj_cb.emit_by_name::<()>("swipe-pressed", &[&dir.to_value()]);
                     }
 
@@ -170,7 +169,6 @@ impl ObjectImpl for ButtonInner {
                     if let (true, dir) = did_swipe_increment((x, y), last) {
                         state.set(KeyState::Swiping { x, y });
                         if let Some(dir) = dir {
-                            debug!("[Swipe] direction={:?}", dir);
                             obj_cb.emit_by_name::<()>("swipe-repeated", &[&dir.to_value()]);
                         }
                     }
