@@ -54,13 +54,11 @@ left:
       - key: KEY_APOSTROPHE
         mods: [Shift]
         label: "\""
-        n:
-          Layer: [Right, 1]
       - key: KEY_1
         mods: [Shift]
         label: "!"
         n:
-          Key: KEY_QUESTION
+          ModKey: [KEY_SLASH, [Shift]]
   - - - key: KEY_3
         mods: [Shift]
         label: "#"

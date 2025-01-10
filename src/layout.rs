@@ -180,6 +180,9 @@ pub enum SwipeAction {
     /// Fire a regular key press.
     Key(evdev::Key),
 
+    /// Fire a modified key press.
+    ModKey(evdev::Key, Vec<Modifier>),
+
     /// Switch layer
     Layer(Side, usize),
 

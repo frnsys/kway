@@ -274,6 +274,17 @@ fn send_mod_key(modifier: u16, key: u16, sender: &ComponentSender<UIModel>) {
     sender.input(KeyMessage::ModRelease(modifier).into());
 }
 
+fn send_mods_key(modifiers: Vec<u16>, key: u16, sender: &ComponentSender<UIModel>) {
+    for modifier in &modifiers {
+        sender.input(KeyMessage::ModPress(*modifier).into());
+    }
+    sender.input(KeyMessage::ButtonPress(key).into());
+    sender.input(KeyMessage::ButtonRelease(key).into());
+    for modifier in &modifiers {
+        sender.input(KeyMessage::ModRelease(*modifier).into());
+    }
+}
+
 fn handle_swipe_action_press(
     key_def: &BasicKey,
     action: &SwipeAction,
@@ -285,6 +296,10 @@ fn handle_swipe_action_press(
     match action {
         SwipeAction::Key(key) => {
             send_key(key.code(), sender);
+        }
+        SwipeAction::ModKey(key, modifiers) => {
+            let modifiers = modifiers.iter().map(Modifier::code).collect();
+            send_mods_key(modifiers, key.code(), sender);
         }
         SwipeAction::Modified(modifier) => {
             send_mod_key(modifier.code(), scan_code, sender);
