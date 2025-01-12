@@ -22,6 +22,8 @@ use crate::{
 
 use super::{UIMessage, UIModel, key::KeyButton, swipe::Direction};
 
+const KEY_SPACING: i32 = 2;
+
 impl BasicKey {
     fn dir_action(&self, dir: Direction) -> &Option<SwipeAction> {
         match dir {
@@ -246,6 +248,7 @@ impl Layer {
 
             row.iter().for_each(|key| {
                 let button = key.render(key_size, &sender);
+                button.set_margin_all(KEY_SPACING);
                 row_container.append(&button);
             });
 

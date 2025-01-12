@@ -23,6 +23,8 @@ left:
       - key: KEY_D
         n:
           Modified: Shift
+        s:
+          Modified: Ctrl
       - key: KEY_F
         n:
           Modified: Shift
@@ -90,7 +92,15 @@ left:
       - key: KEY_KPEQUAL
       - key: KEY_KPASTERISK
   - - - key: KEY_LEFTBRACE
+        label: "["
       - key: KEY_RIGHTBRACE
+        label: "]"
+    - - key: KEY_LEFTBRACE
+        mods: [Shift]
+        label: "{"
+      - key: KEY_RIGHTBRACE
+        mods: [Shift]
+        label: "}"
     - - key: KEY_COMMA
         mods: [Shift]
         label: "<"
@@ -179,6 +189,8 @@ right:
       - key: KEY_U
         n:
           Modified: Shift
+        s:
+          Modified: Ctrl
       - key: KEY_I
         n:
           Modified: Shift
@@ -227,6 +239,10 @@ right:
         w:
           Layer: [Left, 4]
       - key: KEY_DOT
+        s:
+          Key: KEY_ESC
+        n:
+          Key: KEY_TAB
       - key: KEY_SLASH
         n:
           Key: KEY_BACKSLASH
