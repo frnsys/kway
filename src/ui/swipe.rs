@@ -4,7 +4,9 @@ use gdk4::glib::{
 };
 
 /// Minimum distance to trigger a swipe.
-const SWIPE_MIN_DISTANCE: f64 = 2.;
+/// If this is too low, then taps may be
+/// interpreted as swipes.
+const SWIPE_MIN_DISTANCE: f64 = 3.;
 
 /// Swipe angle must be w/in this number of degrees
 /// to trigger a directional swipe.

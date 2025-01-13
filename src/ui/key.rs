@@ -158,10 +158,15 @@ impl ObjectImpl for ButtonInner {
                 // Check if we started a swipe.
                 let (did_swipe, dir) = did_swipe(x, y);
                 if did_swipe && state.can_swipe() {
-                    state.set(KeyState::Swiping { x, y });
-                    debug!("[Swipe] offset={:?},{:?}", x, y);
+                    debug!("  [Swipe] offset={:?},{:?}", x, y);
 
                     if let Some(dir) = dir {
+                        // Note we only claim this interaction as a swipe
+                        // if a drection is detected, otherwise it's left
+                        // unclaimed (likely to be treated as a tap).
+                        state.set(KeyState::Swiping { x, y });
+
+                        debug!("  [Swipe] direction={:?}", dir);
                         obj_cb.emit_by_name::<()>("swipe-pressed", &[&dir.to_value()]);
                     } else {
                         debug!("  [Swipe] no direction");
