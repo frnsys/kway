@@ -107,7 +107,7 @@ impl Keyboard {
                 }
             }
             KeyMessage::Layer(side, idx) => {
-                debug!("[Layer] Switched: {:?} -> {:?}", side, idx);
+                debug!("  [Layer] Switched: {:?} -> {:?}", side, idx);
                 match side {
                     Side::Left => self.layer.0 = idx,
                     Side::Right => self.layer.1 = idx,
@@ -118,7 +118,7 @@ impl Keyboard {
 
     fn press_key(&mut self, key: evdev::Key) {
         if let Some(keyboard) = &self.session_state.keyboard {
-            debug!("[Key] Pressed: {:?}", key);
+            debug!("  [Key] Pressed: {:?}", key);
             keyboard.key(0, key.code().into(), KeyState::Pressed.into());
             self.event_queue.roundtrip(&mut self.session_state).unwrap();
         }
@@ -126,14 +126,14 @@ impl Keyboard {
 
     fn release_key(&mut self, key: evdev::Key) {
         if let Some(keyboard) = &self.session_state.keyboard {
-            debug!("[Key] Released: {:?}", key);
+            debug!("  [Key] Released: {:?}", key);
             keyboard.key(0, key.code().into(), KeyState::Released.into());
             self.event_queue.roundtrip(&mut self.session_state).unwrap();
         }
     }
 
     fn append_mod(&mut self, key: evdev::Key) {
-        debug!("[Mod] Appended: {:?}", key);
+        debug!("  [Mod] Appended: {:?}", key);
         let mod_code = Self::map_mod_key(key);
         self.modifiers |= mod_code;
 
@@ -141,7 +141,7 @@ impl Keyboard {
     }
 
     fn remove_mod(&mut self, key: evdev::Key) {
-        debug!("[Mod] Removed: {:?}", key);
+        debug!("  [Mod] Removed: {:?}", key);
         let mod_code = Self::map_mod_key(key);
         self.modifiers &= !mod_code;
 
@@ -149,7 +149,7 @@ impl Keyboard {
     }
 
     fn append_lock(&mut self, key: evdev::Key) {
-        debug!("[Lock] Appended: {:?}", key);
+        debug!("  [Lock] Appended: {:?}", key);
         let lock_code = Self::map_lock_key(key);
         self.locks |= lock_code;
 
@@ -157,7 +157,7 @@ impl Keyboard {
     }
 
     fn remove_lock(&mut self, key: evdev::Key) {
-        debug!("[Lock] Removed: {:?}", key);
+        debug!("  [Lock] Removed: {:?}", key);
         let lock_code = Self::map_lock_key(key);
         self.locks &= !lock_code;
 
@@ -166,7 +166,6 @@ impl Keyboard {
 
     pub fn destroy(&mut self) {
         if let Some(keyboard) = &self.session_state.keyboard {
-            debug!("Destroying Virtual Keyboard.");
             keyboard.destroy();
             self.event_queue.roundtrip(&mut self.session_state).unwrap();
         }

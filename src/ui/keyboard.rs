@@ -185,7 +185,7 @@ impl BasicKey {
                     let dir: Direction = unsafe { Direction::from_value(&args[1]) };
                     let action = key_cb.dir_action(dir);
                     if let Some(action) = action {
-                        debug!("[Swipe] Pressed: {:?} -> {:?}", dir, action);
+                        debug!("  [Swipe] Pressed: {:?} -> {:?}", dir, action);
                         state_cb.store(Some(Arc::new(dir)));
                         handle_swipe_action_press(&key_cb, action, dir, &sender_cb);
                     }
@@ -199,7 +199,7 @@ impl BasicKey {
                     let dir: Direction = unsafe { Direction::from_value(&args[1]) };
                     let action = key_cb.dir_action(dir);
                     if let Some(action) = action {
-                        debug!("[Swipe] Repeated: {:?} -> {:?}", dir, action);
+                        debug!("  [Swipe] Repeated: {:?} -> {:?}", dir, action);
                         state_cb.store(Some(Arc::new(dir)));
                         handle_swipe_action_repeat(&key_cb, action, dir, &sender_cb);
                     }
@@ -214,7 +214,7 @@ impl BasicKey {
                     if let Some(dir) = state_cb.swap(None) {
                         let action = key_cb.dir_action(*dir);
                         if let Some(action) = action {
-                            debug!("[Swipe] Released: {:?} -> {:?}", dir, action);
+                            debug!("  [Swipe] Released: {:?} -> {:?}", dir, action);
                             handle_swipe_action_release(&key_cb, action, *dir, &sender_cb);
                         }
                     } else {

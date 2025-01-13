@@ -129,13 +129,14 @@ impl ObjectImpl for ButtonInner {
         let weak_ref = self.downgrade();
         let state = action_state.clone();
         gesture.connect_drag_begin(move |_gesture, _x, _y| {
+            debug!("[Interaction Start]");
             state.set(KeyState::Unclaimed);
 
             let weak_ref = weak_ref.clone();
             let state = state.clone();
             glib::timeout_add_once(Duration::from_millis(HOLD_TERM), move || {
                 if state.can_press() {
-                    debug!("[Hold]");
+                    debug!("  [Hold]");
                     state.set(KeyState::Pressed);
                     let obj = weak_ref.upgrade().unwrap();
                     obj.obj().emit_by_name::<()>("tap-pressed", &[]);
@@ -162,6 +163,8 @@ impl ObjectImpl for ButtonInner {
 
                     if let Some(dir) = dir {
                         obj_cb.emit_by_name::<()>("swipe-pressed", &[&dir.to_value()]);
+                    } else {
+                        debug!("  [Swipe] no direction");
                     }
 
                 // Otherwise check if we're incrementing a swipe (swipe-hold).
@@ -182,12 +185,12 @@ impl ObjectImpl for ButtonInner {
             // If this hasn't yet been claimed as a swipe or a hold
             // then treat it as a tap.
             if state.can_press() {
-                debug!("[Tap]");
+                debug!("  [Tap]");
                 state.set(KeyState::Pressed);
                 obj_cb.emit_by_name::<()>("tap-pressed", &[]);
             }
 
-            debug!("[Release]");
+            debug!("  [Release]");
             state.reset();
             obj_cb.emit_by_name::<()>("released", &[]);
         });
