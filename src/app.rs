@@ -14,7 +14,7 @@ pub struct App {
 }
 impl App {
     pub fn new(layout: Layout) -> Self {
-        let ui = RelmApp::<UIMessage>::new("clav");
+        let ui = RelmApp::<UIMessage>::new("kway");
         let styles = include_str!("../assets/style.css");
         relm4::set_global_css_with_priority(styles, relm4::gtk::STYLE_PROVIDER_PRIORITY_USER);
 

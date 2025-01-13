@@ -15,7 +15,7 @@ use tracing_subscriber::EnvFilter;
 
 #[derive(Clone, Debug, Bpaf)]
 #[bpaf(options, version)]
-/// clav, a virtual keyboard.
+/// kway, a virtual keyboard.
 struct Args {
     /// Path to layout file
     layout: Option<PathBuf>,
@@ -25,11 +25,11 @@ fn main() {
     let opts = args().run();
     let layout = opts.layout.map_or_else(Layout::default, Layout::from_path);
 
-    let filter = "none,clav=debug";
+    let filter = "none,kway=debug";
     let log_file = std::fs::OpenOptions::new()
         .append(true)
         .create(true)
-        .open("/tmp/clav.log")
+        .open("/tmp/kway.log")
         .unwrap();
     tracing_subscriber::fmt()
         .with_max_level(tracing::Level::DEBUG)

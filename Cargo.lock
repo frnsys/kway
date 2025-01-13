@@ -174,30 +174,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fd16c4719339c4530435d38e511904438d07cce7950afa3718a84ac36c10e89e"
 
 [[package]]
-name = "clav"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "arc-swap",
- "bpaf",
- "evdev",
- "fs-err",
- "gdk4",
- "gtk4-layer-shell",
- "mouse-keyboard-input",
- "relm4",
- "serde",
- "serde_yaml",
- "skyspell_core",
- "tempfile",
- "tracing",
- "tracing-subscriber",
- "wayland-client",
- "wayland-protocols-misc",
- "xkbcommon",
-]
-
-[[package]]
 name = "crossbeam-channel"
 version = "0.5.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -857,6 +833,30 @@ name = "khronos_api"
 version = "3.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e2db585e1d738fc771bf08a151420d3ed193d9d895a36df7f6f8a9456b911ddc"
+
+[[package]]
+name = "kway"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "arc-swap",
+ "bpaf",
+ "evdev",
+ "fs-err",
+ "gdk4",
+ "gtk4-layer-shell",
+ "mouse-keyboard-input",
+ "relm4",
+ "serde",
+ "serde_yaml",
+ "skyspell_core",
+ "tempfile",
+ "tracing",
+ "tracing-subscriber",
+ "wayland-client",
+ "wayland-protocols-misc",
+ "xkbcommon",
+]
 
 [[package]]
 name = "lazy_static"
