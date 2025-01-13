@@ -56,19 +56,18 @@ impl KeyDef {
                 button.upcast()
             }
             KeyDef::PointerButton(key) => {
+                let key = *key;
                 let button = KeyButton::default();
                 button.set_primary_content(key.glyph());
                 button.set_width_request(size);
                 button.set_height_request(size);
 
-                let key = key.clone();
                 let sender_cb = sender.clone();
                 button.connect("tap-pressed", true, move |_| {
                     sender_cb.input(PointerMessage::Press(key).into());
                     None
                 });
 
-                let key = key.clone();
                 let sender_cb = sender.clone();
                 button.connect("released", true, move |_| {
                     sender_cb.input(PointerMessage::Release(key).into());
@@ -212,7 +211,7 @@ impl BasicKey {
                 let state_cb = state.clone();
                 let modifiers = key.modifiers.clone();
                 button.connect("released", true, move |_| {
-                    if let Some(dir) = state_cb.swap(None).take() {
+                    if let Some(dir) = state_cb.swap(None) {
                         let action = key_cb.dir_action(*dir);
                         if let Some(action) = action {
                             debug!("[Swipe] Released: {:?} -> {:?}", dir, action);

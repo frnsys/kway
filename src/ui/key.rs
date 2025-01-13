@@ -238,7 +238,7 @@ impl KeyButton {
             .build();
 
         if let Some(primary_content) = primary_content {
-            if primary_content.len() > 0 {
+            if !primary_content.is_empty() {
                 let primary_content = gtk::Label::new(Some(primary_content.as_str()));
                 layout.append(&primary_content);
             }
@@ -249,7 +249,7 @@ impl KeyButton {
             child.unparent();
         }
 
-        layout.set_parent(&*self);
+        layout.set_parent(self);
     }
 }
 impl Default for KeyButton {

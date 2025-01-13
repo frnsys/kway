@@ -1,5 +1,4 @@
 use std::{ffi::CString, fs::File, io::Write, os::fd::AsFd, path::PathBuf};
-use tracing::debug;
 use wayland_client::{
     Connection, Dispatch, Proxy, QueueHandle, WEnum,
     protocol::{
@@ -47,12 +46,12 @@ impl Dispatch<wl_registry::WlRegistry, ()> for SessionState {
             match interface.as_str() {
                 "zwp_virtual_keyboard_manager_v1" => {
                     let keyboard =
-                        registry.bind::<ZwpVirtualKeyboardManagerV1, _, _>(name, version, &qh, ());
+                        registry.bind::<ZwpVirtualKeyboardManagerV1, _, _>(name, version, qh, ());
                     state.keyboard_manager = Some(keyboard);
                 }
                 "zwp_input_method_manager_v2" => {
                     let input =
-                        registry.bind::<ZwpInputMethodManagerV2, _, _>(name, version, &qh, ());
+                        registry.bind::<ZwpInputMethodManagerV2, _, _>(name, version, qh, ());
                     state.input_manager = Some(input);
                 }
                 "wl_seat" => {
@@ -126,10 +125,10 @@ impl Dispatch<ZwpInputMethodV2, ()> for SessionState {
         _: &Connection,
         _: &QueueHandle<SessionState>,
     ) {
-        debug!("[Input]: {:?}", event);
+        // debug!("[Input]: {:?}", event);
         match event {
             zwp_input_method_v2::Event::Activate => {
-                debug!("[Input]: Activated");
+                // debug!("[Input]: Activated");
                 state.input_serial = 0;
             }
             zwp_input_method_v2::Event::Done => {

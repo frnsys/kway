@@ -112,16 +112,6 @@ impl Keyboard {
                     Side::Left => self.layer.0 = idx,
                     Side::Right => self.layer.1 = idx,
                 }
-
-                // TODO testing
-                // if let Some(input) = &self.session_state.input {
-                //     // TODO
-                //     println!("INPUT HANDLING");
-                //     println!("  Serial: {:?}", self.session_state.input_serial);
-                //     input.commit_string("testing".into());
-                //     input.commit(self.session_state.input_serial);
-                //     self.event_queue.roundtrip(&mut self.session_state).unwrap();
-                // }
             }
         }
     }
