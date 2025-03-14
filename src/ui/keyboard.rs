@@ -117,7 +117,7 @@ impl KeyDef {
 }
 
 impl BasicKey {
-    fn render(&self, size: i32, sender: &ComponentSender<UIModel>) -> gtk::Widget {
+    pub fn render(&self, size: i32, sender: &ComponentSender<UIModel>) -> gtk::Widget {
         let key = self.clone();
         let glyph = key.glyph();
         let scan_code = key.key.code();

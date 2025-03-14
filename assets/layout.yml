@@ -1,3 +1,8 @@
+trigger:
+  w: Arrow
+  e: Arrow
+  n: Arrow
+  s: Arrow
 left:
   - - - key: KEY_Q
         n:

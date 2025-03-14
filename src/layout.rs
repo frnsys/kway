@@ -10,6 +10,7 @@ use crate::pointer::PointerButton;
 pub struct Layout {
     pub left: Vec<Layer>,
     pub right: Vec<Layer>,
+    pub trigger: TriggerKey,
 }
 
 impl Layout {
@@ -77,6 +78,7 @@ pub struct Command {
     pub label: String,
 }
 
+#[allow(clippy::large_enum_variant)]
 #[derive(Debug, Clone, Deserialize)]
 #[serde(untagged)]
 pub enum KeyDef {
@@ -107,6 +109,35 @@ where
     }
     Helper::deserialize(deserializer)?;
     Ok(())
+}
+
+/// Define special swipe behaviors
+/// for the button that opens the keyboard.
+#[derive(Debug, Clone, Deserialize)]
+pub struct TriggerKey {
+    #[serde(default, rename = "n")]
+    pub up: Option<SwipeAction>,
+
+    #[serde(default, rename = "e")]
+    pub right: Option<SwipeAction>,
+
+    #[serde(default, rename = "w")]
+    pub left: Option<SwipeAction>,
+
+    #[serde(default, rename = "s")]
+    pub down: Option<SwipeAction>,
+}
+impl TriggerKey {
+    pub fn as_key(&self) -> BasicKey {
+        BasicKey {
+            label: Some(" ".into()),
+            up: self.up.clone(),
+            right: self.right.clone(),
+            left: self.left.clone(),
+            down: self.down.clone(),
+            ..Default::default()
+        }
+    }
 }
 
 #[derive(Debug, Clone, Deserialize)]

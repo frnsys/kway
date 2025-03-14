@@ -2,7 +2,7 @@ use tracing::debug;
 use wayland_client::{Connection, EventQueue, protocol::wl_keyboard::KeyState};
 
 use crate::{
-    layout::{Layer, Layout, Side},
+    layout::{Layer, Layout, Side, TriggerKey},
     session::SessionState,
 };
 
@@ -195,6 +195,10 @@ impl Keyboard {
             evdev::Key::KEY_SCROLLLOCK => 32768,
             _ => 0,
         }
+    }
+
+    pub fn trigger_key(&self) -> &TriggerKey {
+        &self.layout.trigger
     }
 
     pub fn left_layers(&self) -> impl Iterator<Item = &Layer> {

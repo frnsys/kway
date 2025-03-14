@@ -5,18 +5,17 @@ mod swipe;
 
 use std::process::Command;
 
+use gdk4::glib::{self, object::ObjectExt};
 use gtk::prelude::{ApplicationExt, GtkWindowExt, WidgetExt};
 use gtk4_layer_shell::{Edge, KeyboardMode, Layer, LayerShell};
 use relm4::{
     ComponentParts, ComponentSender, SimpleComponent,
-    gtk::{
-        self,
-        prelude::{ButtonExt, GtkApplicationExt},
-    },
+    gtk::{self, prelude::GtkApplicationExt},
 };
 
 use crate::{
     keyboard::{KeyMessage, Keyboard},
+    layout::TriggerKey,
     pointer::{Pointer, PointerMessage},
 };
 
@@ -88,18 +87,11 @@ impl SimpleComponent for UIModel {
         window: Self::Root,
         sender: ComponentSender<Self>,
     ) -> ComponentParts<Self> {
+        let (keyboard, pointer) = handle;
+
         // The main window hosts the button
         // to show the keyboard.
-        let trigger = gtk::Button::builder()
-            .label("")
-            .width_request(8)
-            .height_request(8)
-            .css_classes(["trigger"])
-            .build();
-        let sender_cb = sender.clone();
-        trigger.connect_clicked(move |_| {
-            sender_cb.input(UIMessage::ShowKeyboard);
-        });
+        let trigger = setup_trigger_key(keyboard.trigger_key(), sender.clone());
         window.init_layer_shell();
         window.set_layer(Layer::Overlay);
         window.set_keyboard_mode(KeyboardMode::None);
@@ -115,8 +107,6 @@ impl SimpleComponent for UIModel {
         );
         setup_window(&mut left, true);
         setup_window(&mut right, false);
-
-        let (keyboard, pointer) = handle;
 
         let left_halves: Vec<_> = keyboard
             .left_layers()
@@ -179,6 +169,21 @@ impl SimpleComponent for UIModel {
             }
         }
     }
+}
+
+fn setup_trigger_key(trigger_key: &TriggerKey, sender: ComponentSender<UIModel>) -> gtk::Widget {
+    let trigger = trigger_key.as_key();
+    let trigger = trigger.render(8, &sender);
+    trigger.set_css_classes(&["trigger"]);
+
+    let sender_cb = sender.clone();
+    trigger.connect("tap-pressed", false, move |args| {
+        let obj = args[0].get::<glib::Object>().expect("Failed to get object");
+        obj.stop_signal_emission_by_name("tap-pressed");
+        sender_cb.input(UIMessage::ShowKeyboard);
+        None
+    });
+    trigger
 }
 
 /// Setup the window for a half of the keyboard.
