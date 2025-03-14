@@ -27,8 +27,8 @@ pub struct UIModel {
     trigger: gtk::Window,
     keyboard: Keyboard,
     pointer: Pointer,
-    left: Vec<gtk::Box>,
-    right: Vec<gtk::Box>,
+    left: Vec<gtk::Overlay>,
+    right: Vec<gtk::Overlay>,
 }
 
 #[derive(Debug)]
@@ -50,6 +50,9 @@ pub enum UIMessage {
 
     /// Show the keyboard.
     ShowKeyboard,
+
+    /// Change the keyboard opacity.
+    FadeKeyboard(i8),
 
     /// Quit the application.
     Quit,
@@ -164,6 +167,9 @@ impl SimpleComponent for UIModel {
             UIMessage::ShowKeyboard => {
                 self.show_keyboard();
             }
+            UIMessage::FadeKeyboard(change) => {
+                self.fade_keyboard(change);
+            }
             UIMessage::Quit => {
                 self.keyboard.destroy();
                 relm4::main_application().quit();
@@ -192,7 +198,7 @@ fn setup_window(window: &mut gtk::Window, is_left: bool) {
     window.init_layer_shell();
     window.set_layer(Layer::Overlay);
     window.set_keyboard_mode(KeyboardMode::None);
-    // window.set_opacity(0.1);
+    window.set_opacity(0.8);
 
     let anchors = [
         (Edge::Left, is_left),
@@ -222,5 +228,13 @@ impl UIModel {
         self.trigger.set_visible(true);
         self.window.0.set_visible(false);
         self.window.1.set_visible(false);
+    }
+
+    fn fade_keyboard(&self, change: i8) {
+        let change = change as f64 * 0.1;
+        let opacity = self.window.0.opacity() + change;
+        let opacity = opacity.min(0.8).max(0.1);
+        self.window.0.set_opacity(opacity);
+        self.window.1.set_opacity(opacity);
     }
 }

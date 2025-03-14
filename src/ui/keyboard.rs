@@ -9,7 +9,7 @@ use relm4::{
     ComponentSender, RelmWidgetExt,
     gtk::{
         self,
-        prelude::{BoxExt, ToggleButtonExt, WidgetExt},
+        prelude::{BoxExt, GestureDragExt, ToggleButtonExt, WidgetExt},
     },
 };
 use tracing::debug;
@@ -235,7 +235,9 @@ impl BasicKey {
 }
 
 impl Layer {
-    pub fn render(&self, sender: ComponentSender<UIModel>) -> gtk::Box {
+    pub fn render(&self, sender: ComponentSender<UIModel>) -> gtk::Overlay {
+        let overlay = gtk::Overlay::new();
+
         let container = gtk::Box::builder()
             .orientation(gtk::Orientation::Vertical)
             .build();
@@ -254,13 +256,32 @@ impl Layer {
             container.append(&row_container);
         }
 
+        // Add a invisible swipe area on the left half of each keyboard half.
+        let drag_handle = gtk::Box::new(gtk::Orientation::Vertical, 0);
+        drag_handle.add_css_class("drag-handle");
+        drag_handle.set_size_request(KB_PADDING, -1);
+        drag_handle.set_halign(gtk::Align::Start);
+        drag_handle.set_valign(gtk::Align::Fill);
+        overlay.add_overlay(&drag_handle);
+
+        // Attach a drag handler to detect the swipes/drags.
+        let drag = gtk::GestureDrag::new();
+        let sender_cb = sender.clone();
+        drag.connect_drag_update(move |_, _, y| {
+            let change = if y > 0. { -1 } else { 1 };
+            sender_cb.input(UIMessage::FadeKeyboard(change));
+        });
+        drag_handle.add_controller(drag);
+
         // Swiping/dragging leads to weird velocity/offset values
         // if the swipe/drag ends outside of the gtk window.
         // Having some margin helps protect against this.
         container.set_margin_all(KB_PADDING);
         container.set_align(gtk::Align::Center);
         container.set_expand(true);
-        container
+
+        overlay.set_child(Some(&container));
+        overlay
     }
 }
 

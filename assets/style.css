@@ -35,3 +35,7 @@ button:checked {
   margin-bottom: 2px;
   border-radius: 2px 0 0 0;
 }
+
+.drag-handle {
+  background: rgba(0, 0, 0, 0.15);
+}
