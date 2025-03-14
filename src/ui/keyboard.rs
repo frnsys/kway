@@ -23,6 +23,8 @@ use crate::{
 use super::{UIMessage, UIModel, key::KeyButton, swipe::Direction};
 
 const KEY_SPACING: i32 = 2;
+const KEY_SIZE: i32 = 42;
+const KB_PADDING: i32 = 24;
 
 impl BasicKey {
     fn dir_action(&self, dir: Direction) -> &Option<SwipeAction> {
@@ -234,8 +236,6 @@ impl BasicKey {
 
 impl Layer {
     pub fn render(&self, sender: ComponentSender<UIModel>) -> gtk::Box {
-        let key_size = 48;
-
         let container = gtk::Box::builder()
             .orientation(gtk::Orientation::Vertical)
             .build();
@@ -246,7 +246,7 @@ impl Layer {
                 .build();
 
             row.iter().for_each(|key| {
-                let button = key.render(key_size, &sender);
+                let button = key.render(KEY_SIZE, &sender);
                 button.set_margin_all(KEY_SPACING);
                 row_container.append(&button);
             });
@@ -257,7 +257,7 @@ impl Layer {
         // Swiping/dragging leads to weird velocity/offset values
         // if the swipe/drag ends outside of the gtk window.
         // Having some margin helps protect against this.
-        container.set_margin_all(32);
+        container.set_margin_all(KB_PADDING);
         container.set_align(gtk::Align::Center);
         container.set_expand(true);
         container

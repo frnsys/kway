@@ -162,12 +162,12 @@ impl ObjectImpl for ButtonInner {
 
                     if let Some(dir) = dir {
                         // Note we only claim this interaction as a swipe
-                        // if a drection is detected, otherwise it's left
+                        // if a direction is detected, otherwise it's left
                         // unclaimed (likely to be treated as a tap).
                         state.set(KeyState::Swiping { x, y });
 
                         debug!("  [Swipe] direction={:?}", dir);
-                        obj_cb.emit_by_name::<()>("swipe-pressed", &[&dir.to_value()]);
+                        obj_cb.emit_by_name::<()>("swipe-pressed", &[&dir.as_value()]);
                     } else {
                         debug!("  [Swipe] no direction");
                     }
@@ -177,7 +177,7 @@ impl ObjectImpl for ButtonInner {
                     if let (true, dir) = did_swipe_increment((x, y), last) {
                         state.set(KeyState::Swiping { x, y });
                         if let Some(dir) = dir {
-                            obj_cb.emit_by_name::<()>("swipe-repeated", &[&dir.to_value()]);
+                            obj_cb.emit_by_name::<()>("swipe-repeated", &[&dir.as_value()]);
                         }
                     }
                 }

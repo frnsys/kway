@@ -25,6 +25,15 @@ KERNEL=="uinput", GROUP="input", MODE="0660"
 sudo udevadm control --reload-rules
 sudo udevadm trigger
 
+# Also make sure the `uinput` kernel module is loaded:
+lsmod | grep uinput
+
+# If there's no output, load the module:
+sudo modprobe uinput
+
+# And to persist across reboots:
+echo "uinput" | sudo tee -a /etc/modules
+
 # If you added your user to the `input` group
 # you need to login/logout for the changes to take effect.
 sudo reboot

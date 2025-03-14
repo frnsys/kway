@@ -149,6 +149,7 @@ impl SimpleComponent for UIModel {
                 self.pointer.handle(msg).unwrap();
             }
             UIMessage::Command(cmd, args) => {
+                #[allow(clippy::zombie_processes)]
                 Command::new(cmd)
                     .args(args)
                     .spawn()

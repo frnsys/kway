@@ -26,12 +26,12 @@ pub enum PointerButton {
     #[serde(rename = "PointerRight")]
     Right,
 }
-impl Into<Button> for PointerButton {
-    fn into(self) -> Button {
-        match self {
-            Self::Left => BTN_LEFT,
-            Self::Middle => BTN_MIDDLE,
-            Self::Right => BTN_RIGHT,
+impl From<PointerButton> for Button {
+    fn from(val: PointerButton) -> Self {
+        match val {
+            PointerButton::Left => BTN_LEFT,
+            PointerButton::Middle => BTN_MIDDLE,
+            PointerButton::Right => BTN_RIGHT,
         }
     }
 }

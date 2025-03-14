@@ -166,8 +166,9 @@ left:
       - cmd: riverctl
         args: ["send-layout-cmd", "filtile", "monocle"]
         label: f
-    - - key: KEY_VOLUMEUP
-        label: "▴"
+    - - cmd: riverctl
+        args: ["send-layout-cmd", "filtile", "flip"]
+        label: "⇋"
       - cmd: mpc
         args: [toggle]
         label: "▸"
@@ -177,8 +178,8 @@ left:
       - cmd: kitty
         args: ["--title", "bluetuith", "-e", "bluetuith"]
         label: b
-    - - key: KEY_VOLUMEDOWN
-        label: "▾"
+    - - cmd: rotate
+        label: "↺"
       - key: KEY_MUTE
         label: "◌"
       - cmd: kitty

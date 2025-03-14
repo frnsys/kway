@@ -47,7 +47,7 @@ pub enum Direction {
     Down,
 }
 impl Direction {
-    pub fn to_value(&self) -> u8 {
+    pub fn as_value(&self) -> u8 {
         match self {
             Self::Up => 0,
             Self::Left => 1,
