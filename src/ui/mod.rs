@@ -233,7 +233,7 @@ impl UIModel {
     fn fade_keyboard(&self, change: i8) {
         let change = change as f64 * 0.1;
         let opacity = self.window.0.opacity() + change;
-        let opacity = opacity.min(0.8).max(0.1);
+        let opacity = opacity.clamp(0.1, 0.8);
         self.window.0.set_opacity(opacity);
         self.window.1.set_opacity(opacity);
     }
